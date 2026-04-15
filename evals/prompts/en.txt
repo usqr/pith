@@ -1,0 +1,50 @@
+Why does my React component re-render on every parent render even with the same props?
+How do I properly cancel a fetch request in React when a component unmounts?
+What is the difference between useCallback and useMemo and when should I use each?
+How do I set up code splitting in React with React.lazy and Suspense?
+What causes the stale closure problem in React hooks and how do I fix it?
+How do I prevent N+1 queries in an ORM like Prisma or Sequelize?
+How do I handle database transactions correctly with async/await in Node.js?
+How do I implement rate limiting on an Express API endpoint?
+What is the difference between JWT and session-based authentication and when should I use each?
+How do I prevent SQL injection in a Node.js application?
+How do I find and optimize a slow PostgreSQL query?
+What is the difference between a covering index and a partial index in PostgreSQL?
+How do I prevent deadlocks in database transactions?
+What is MVCC in PostgreSQL and why does it matter for concurrent writes?
+When should I use a materialized view instead of a regular view?
+What is the difference between git rebase and git merge?
+How do I revert a commit that has already been pushed to main?
+How does git bisect work and when should I use it?
+What is the correct git workflow for hotfixes on a release branch?
+How do I squash multiple commits into one before merging a PR?
+How do I debug a memory leak in a Node.js application?
+What is the difference between horizontal and vertical scaling and when should I use each?
+How does a mutex prevent race conditions and what are the tradeoffs?
+What is the difference between a thread and a process?
+How do I implement a circuit breaker pattern in a microservice?
+How do I use Python asyncio for concurrent HTTP requests?
+What is Python's GIL and when does it actually matter for performance?
+What is the difference between deepcopy and shallow copy in Python?
+How do I properly implement __eq__ and __hash__ for a custom Python class?
+What is the difference between a generator and a list in Python and when to use each?
+How do I reduce Docker image size using multi-stage builds?
+What is the difference between CMD and ENTRYPOINT in a Dockerfile?
+How do I debug a container that exits immediately after starting?
+How do I handle secrets securely in Docker and Kubernetes?
+What is the difference between a Kubernetes Deployment and a StatefulSet?
+What is CSRF and how do I prevent it in a REST API?
+How do I securely store passwords in a database?
+What is the difference between XSS and CSRF attacks?
+How do I implement proper input validation to prevent injection attacks?
+What HTTP security headers should every API set and why?
+When should I use microservices versus a monolith?
+What is the CAP theorem and how does it apply to choosing a database?
+What is the difference between event sourcing and CQRS?
+How do I design a system to handle 100,000 requests per second?
+What is the difference between optimistic and pessimistic locking?
+What is the difference between unit, integration, and end-to-end tests?
+When should I mock dependencies in tests versus using real implementations?
+How do I test async code in Jest without flakiness?
+What is the right way to measure and improve test coverage meaningfully?
+How do I set up a CI pipeline that catches bugs without slowing down development?

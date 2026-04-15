@@ -1,0 +1,9 @@
+node_modules/
+__pycache__/
+*.pyc
+.env
+.env.local
+evals/snapshots/
+benchmarks/results/
+.DS_Store
+*.log

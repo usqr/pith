@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "pith",
+  "owner": {
+    "name": "Pith",
+    "url": "https://github.com/abhisekjha/pith"
+  },
+  "plugins": [
+    {
+      "name": "pith",
+      "description": "Token optimization for Claude Code. Automatic tool compression, prompt cache optimization, auto-compaction, structured output formats, and a project wiki that builds itself.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}
