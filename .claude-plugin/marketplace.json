@@ -1,0 +1,16 @@
+{
+  "name": "pith",
+  "owner": {
+    "name": "Abhisek Jha",
+    "url": "https://github.com/abhisekjha/pith"
+  },
+  "plugins": [
+    {
+      "name": "pith",
+      "description": "Token optimization for Claude Code. Automatic tool output compression (40-60% token reduction), token meter in statusline, auto-compact at 70% context, structured output formats, and a self-building project wiki.",
+      "category": "productivity",
+      "source": "./",
+      "homepage": "https://github.com/abhisekjha/pith"
+    }
+  ]
+}
