@@ -112,7 +112,19 @@ process.stdin.on('end', () => {
 
     // ── Token estimate tracking ────────────────────────────────────────────
     const est = Math.ceil(prompt.length / 4);
-    saveProjectState({ input_tokens_est: (proj.input_tokens_est || 0) + est });
+    const newEst = (proj.input_tokens_est || 0) + est;
+    saveProjectState({ input_tokens_est: newEst });
+
+    // ── Auto-compact nudge at 70% context ─────────────────────────────────
+    const CONTEXT_LIMIT = 200000;
+    const COMPACT_THRESHOLD = 0.70;
+    const usageRatio = newEst / CONTEXT_LIMIT;
+    if (usageRatio >= COMPACT_THRESHOLD && !proj.compact_nudged) {
+      saveProjectState({ compact_nudged: true });
+      out.push(
+        `[PITH: Context at ${Math.round(usageRatio * 100)}%. Run /compact now to summarize history and free space.]`
+      );
+    }
 
     // ── Mark setup done if user responded to onboarding ───────────────────
     if (!proj.setup_done && prompt.length > 0) {

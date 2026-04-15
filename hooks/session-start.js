@@ -24,6 +24,7 @@ saveProjectState({
   compact_count_session: 0,
   input_tokens_est: 0,
   output_tokens_est: 0,
+  compact_nudged: false,
 });
 
 const root = pluginRoot();
