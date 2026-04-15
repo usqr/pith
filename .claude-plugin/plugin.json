@@ -1,57 +1,9 @@
 {
   "name": "pith",
-  "version": "0.1.0",
-  "description": "State-of-the-art token optimization for Claude Code. Compresses tool results automatically, optimizes prompt caching, auto-compacts context, enforces structured output formats, and builds a persistent project wiki.",
+  "version": "1.0.0",
+  "description": "Token optimization for Claude Code. Automatic tool output compression (40-60% reduction), token meter in statusline, auto-compact at 70% context, structured output formats, and a self-building project wiki.",
   "author": {
-    "name": "Pith",
+    "name": "Abhisek Jha",
     "url": "https://github.com/abhisekjha/pith"
-  },
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/session-start.js",
-            "timeout": 10,
-            "statusMessage": "Pith: initializing..."
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/prompt-submit.js",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.js",
-            "timeout": 10,
-            "statusMessage": "Pith: compressing..."
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/stop.js",
-            "timeout": 5
-          }
-        ]
-      }
-    ]
   }
 }
