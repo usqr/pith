@@ -28,7 +28,7 @@ Ask these three questions, one at a time:
 2. "Tech stack? Rough is fine."
 3. "Just you, or a team?"
 
-After getting answers, run `python3 tools/setup.py --type greenfield` with the answers as context, then say:
+After getting answers, run `python3 ~/.local/share/pith/tools/setup.py --type greenfield` with the answers as context, then say:
 
 > Wiki ready. I'll maintain it as we build — decisions, architecture, key entities. Every session it gets richer.
 >
@@ -52,7 +52,7 @@ Then run the bootstrap: explore src/, read main files (compressed by Pith automa
 If they skip bootstrap:
 > No problem. I'll start building the wiki from today's work. Every decision and solution we reach, I'll offer to save it.
 
-Run `python3 tools/setup.py --type brownfield` and mark setup complete.
+Run `python3 ~/.local/share/pith/tools/setup.py --type brownfield` and mark setup complete.
 
 ---
 
