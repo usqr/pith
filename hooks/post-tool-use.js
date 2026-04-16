@@ -11,6 +11,7 @@
 // Input (stdin):  JSON { tool_name, tool_input, tool_response }
 // Output (stdout): JSON { output: "compressed" }  OR nothing (pass-through)
 
+const fs   = require('fs');
 const path = require('path');
 const { loadConfig, loadProjectState, saveProjectState } = require('./config');
 
@@ -74,13 +75,36 @@ process.stdin.on('end', () => {
 
     if (compressed !== null) {
       // Track savings estimate
-      const savedLines = lines.length - compressed.split('\n').length;
-      const savedTokens = Math.max(0, Math.round(savedLines * 4));
+      const beforeTokens = Math.ceil(result.length / 4);
+      const afterTokens  = Math.ceil(compressed.length / 4);
+      const savedTokens  = Math.max(0, beforeTokens - afterTokens);
       const proj = loadProjectState();
       saveProjectState({
         tool_savings_session: (proj.tool_savings_session || 0) + savedTokens,
         tokens_saved_session: (proj.tokens_saved_session || 0) + savedTokens,
       });
+
+      // ── Telemetry log ─────────────────────────────────────────────────────
+      try {
+        const os   = require('os');
+        const pDir = require('path').join(os.homedir(), '.pith');
+        fs.mkdirSync(pDir, { recursive: true });
+        const entry = {
+          ts:            new Date().toISOString(),
+          session:       proj.session_start || '',
+          tool:          toolName,
+          label:         (toolInput.file_path || toolInput.command || toolInput.pattern || '').slice(0, 80),
+          before_lines:  lines.length,
+          after_lines:   compressed.split('\n').length,
+          before_tokens: beforeTokens,
+          after_tokens:  afterTokens,
+          saved_pct:     Math.round(savedTokens / beforeTokens * 100),
+          before_head:   lines.slice(0, 3).join('\n'),
+          after_head:    compressed.split('\n').slice(0, 3).join('\n'),
+        };
+        fs.appendFileSync(require('path').join(pDir, 'telemetry.jsonl'), JSON.stringify(entry) + '\n');
+      } catch (e) { /* never block */ }
+
       process.stdout.write(JSON.stringify({ output: compressed }));
     }
   } catch (e) { /* silent — never break a session */ }

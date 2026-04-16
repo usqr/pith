@@ -68,6 +68,14 @@ process.stdin.on('end', () => {
       } else if (arg === 'status') {
         out.push(runTool('health.py', [], root));
 
+      } else if (arg === 'tour') {
+        // /pith tour [step-number] — interactive guided tour
+        const stepArg = rest ? parseInt(rest, 10) : null;
+        const tourAction = (!isNaN(stepArg) && stepArg >= 1 && stepArg <= 7)
+          ? `--step ${stepArg} --action set`
+          : '--action get';
+        out.push(runTool('tour.py', [], root, tourAction) + '\n\n' + loadTourSkill(root));
+
       } else if (arg === 'setup') {
         // Re-run onboarding
         saveProjectState({ setup_done: false });
@@ -112,19 +120,7 @@ process.stdin.on('end', () => {
 
     // ── Token estimate tracking ────────────────────────────────────────────
     const est = Math.ceil(prompt.length / 4);
-    const newEst = (proj.input_tokens_est || 0) + est;
-    saveProjectState({ input_tokens_est: newEst });
-
-    // ── Auto-compact nudge at 70% context ─────────────────────────────────
-    const CONTEXT_LIMIT = 200000;
-    const COMPACT_THRESHOLD = 0.70;
-    const usageRatio = newEst / CONTEXT_LIMIT;
-    if (usageRatio >= COMPACT_THRESHOLD && !proj.compact_nudged) {
-      saveProjectState({ compact_nudged: true });
-      out.push(
-        `[PITH: Context at ${Math.round(usageRatio * 100)}%. Run /compact now to summarize history and free space.]`
-      );
-    }
+    saveProjectState({ input_tokens_est: (proj.input_tokens_est || 0) + est });
 
     // ── Mark setup done if user responded to onboarding ───────────────────
     if (!proj.setup_done && prompt.length > 0) {
@@ -183,13 +179,23 @@ function optimizeCache(root) {
   }
 }
 
-function runTool(script, args, root) {
+function runTool(script, args, root, extraArgs) {
   try {
     const toolPath = path.join(root, 'tools', script);
     if (!fs.existsSync(toolPath)) return `[PITH: tool ${script} not found]`;
     const escaped = args.map(a => `"${String(a).replace(/"/g, '\\"')}"`).join(' ');
-    return execSync(`python3 "${toolPath}" ${escaped}`, { timeout: 30000, encoding: 'utf8', cwd: process.env.CLAUDE_CWD || process.cwd() }).trim();
+    const cmd = `python3 "${toolPath}" ${escaped}${extraArgs ? ' ' + extraArgs : ''}`;
+    return execSync(cmd, { timeout: 30000, encoding: 'utf8', cwd: process.env.CLAUDE_CWD || process.cwd() }).trim();
   } catch (e) {
     return `[PITH: ${script} failed — ${(e.stderr || e.message || '').slice(0, 200)}]`;
+  }
+}
+
+function loadTourSkill(root) {
+  try {
+    return fs.readFileSync(path.join(root, 'skills', 'pith-tour', 'SKILL.md'), 'utf8')
+      .replace(/^---[\s\S]*?---\s*/, '');
+  } catch (e) {
+    return 'PITH TOUR: run the interactive 7-step tour. Guide the user through each Pith feature hands-on.';
   }
 }

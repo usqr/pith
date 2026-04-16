@@ -4,24 +4,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pith — token optimization for Claude Code</title>
-  <meta name="description" content="40–60% token reduction. Zero config. Works from install." />
+  <meta name="description" content="40–60% token reduction. Project wiki. Knowledge graph. Zero config." />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
       --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
       --mono: "SF Mono", ui-monospace, "Cascadia Code", monospace;
-      --bg: #000;
-      --fg: #fff;
-      --fg2: rgba(255,255,255,0.55);
-      --fg3: rgba(255,255,255,0.25);
-      --fg4: rgba(255,255,255,0.10);
-      --border: rgba(255,255,255,0.08);
-      --blue: #0a84ff;
-      --green: #30d158;
-      --red: #ff453a;
-      --amber: #ffd60a;
-      --ease: cubic-bezier(0.25,0.46,0.45,0.94);
+      --bg:      #000;
+      --bg1:     #0a0a0a;
+      --bg2:     #111;
+      --fg:      #fff;
+      --fg2:     rgba(255,255,255,0.55);
+      --fg3:     rgba(255,255,255,0.25);
+      --fg4:     rgba(255,255,255,0.10);
+      --border:  rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --blue:    #0a84ff;
+      --green:   #30d158;
+      --red:     #ff453a;
+      --amber:   #ffd60a;
+      --violet:  #bf5af2;
+      --pink:    #f472b6;
+      --emerald: #34d399;
+      --indigo:  #818cf8;
+      --orange:  #fb923c;
+      --ease:    cubic-bezier(0.25,0.46,0.45,0.94);
     }
 
     html { scroll-behavior: smooth; }
@@ -34,7 +42,7 @@
       overflow-x: hidden;
     }
 
-    /* ━━━━ NAV ━━━━ */
+    /* ━━━━━━━━━━━━━━━━━━━━ NAV ━━━━━━━━━━━━━━━━━━━━ */
     nav {
       position: fixed;
       top: 0; left: 0; right: 0;
@@ -48,612 +56,383 @@
       -webkit-backdrop-filter: saturate(180%) blur(20px);
       border-bottom: 1px solid var(--border);
     }
-
     .logo {
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-      color: var(--fg);
-      text-decoration: none;
-      margin-right: auto;
+      font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
+      color: var(--fg); text-decoration: none; margin-right: auto;
     }
-
-    .nav-links {
-      display: flex;
-      gap: 28px;
-      list-style: none;
-      margin-right: 28px;
-    }
-
+    .nav-links { display: flex; gap: 28px; list-style: none; margin-right: 28px; }
     .nav-links a {
-      font-size: 13px;
-      font-weight: 400;
-      color: var(--fg2);
-      text-decoration: none;
-      letter-spacing: -0.01em;
-      transition: color 0.2s;
+      font-size: 13px; font-weight: 400; color: var(--fg2);
+      text-decoration: none; letter-spacing: -0.01em; transition: color 0.2s;
     }
-
     .nav-links a:hover { color: var(--fg); }
-
     .btn-nav {
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--fg);
-      background: rgba(255,255,255,0.12);
-      border: 1px solid rgba(255,255,255,0.14);
-      padding: 6px 14px;
-      border-radius: 980px;
-      text-decoration: none;
-      letter-spacing: -0.01em;
-      transition: background 0.2s, border-color 0.2s;
+      font-size: 13px; font-weight: 500; color: var(--fg);
+      background: rgba(255,255,255,0.12); border: 1px solid var(--border2);
+      padding: 6px 14px; border-radius: 980px; text-decoration: none;
+      letter-spacing: -0.01em; transition: background 0.2s;
     }
-
     .btn-nav:hover { background: rgba(255,255,255,0.18); }
 
-    /* ━━━━ HERO ━━━━ */
+    /* ━━━━━━━━━━━━━━━━━━━━ HERO ━━━━━━━━━━━━━━━━━━━━ */
     .hero {
-      position: relative;
-      min-height: 100svh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 80px 24px 64px;
-      overflow: hidden;
+      position: relative; min-height: 100svh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 80px 24px 64px; overflow: hidden;
     }
-
-    /* Aurora mesh */
-    .hero-mesh {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .mesh-orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(100px);
-    }
-
-    .m1 { width: 800px; height: 500px; background: radial-gradient(ellipse, rgba(10,132,255,0.12) 0%, transparent 70%); top: -10%; left: 50%; transform: translateX(-50%); }
-    .m2 { width: 400px; height: 400px; background: radial-gradient(ellipse, rgba(48,209,88,0.06) 0%, transparent 70%); bottom: 10%; right: 5%; }
-    .m3 { width: 300px; height: 300px; background: radial-gradient(ellipse, rgba(255,214,10,0.05) 0%, transparent 70%); bottom: 20%; left: 5%; }
-
-    .hero-inner {
-      position: relative;
-      z-index: 1;
-      max-width: 860px;
-    }
-
+    .hero-mesh { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+    .mesh-orb { position: absolute; border-radius: 50%; filter: blur(100px); }
+    .m1 { width:800px;height:500px; background:radial-gradient(ellipse,rgba(10,132,255,0.12) 0%,transparent 70%); top:-10%;left:50%;transform:translateX(-50%); }
+    .m2 { width:400px;height:400px; background:radial-gradient(ellipse,rgba(52,211,153,0.07) 0%,transparent 70%); bottom:10%;right:5%; }
+    .m3 { width:300px;height:300px; background:radial-gradient(ellipse,rgba(191,90,242,0.07) 0%,transparent 70%); bottom:20%;left:5%; }
+    .m4 { width:500px;height:300px; background:radial-gradient(ellipse,rgba(244,114,182,0.05) 0%,transparent 70%); top:30%;right:-5%; }
+    .hero-inner { position:relative;z-index:1;max-width:900px; }
     .hero-eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      font-weight: 500;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--fg3);
-      margin-bottom: 40px;
+      display:inline-flex;align-items:center;gap:8px;
+      font-size:12px;font-weight:500;letter-spacing:0.04em;text-transform:uppercase;
+      color:var(--fg3);margin-bottom:40px;
     }
-
     .eyebrow-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--blue);
-      box-shadow: 0 0 10px rgba(10,132,255,0.8);
-      animation: blink 2.5s ease-in-out infinite;
+      width:6px;height:6px;border-radius:50%;background:var(--blue);
+      box-shadow:0 0 10px rgba(10,132,255,0.8);animation:blink 2.5s ease-in-out infinite;
     }
-
-    @keyframes blink {
-      0%,100% { opacity: 1; }
-      50% { opacity: 0.3; }
-    }
-
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
     .hero h1 {
-      font-size: clamp(64px, 10.5vw, 108px);
-      font-weight: 700;
-      letter-spacing: -0.045em;
-      line-height: 0.95;
-      margin-bottom: 32px;
+      font-size:clamp(60px,10.5vw,108px);font-weight:700;
+      letter-spacing:-0.045em;line-height:0.95;margin-bottom:32px;
     }
-
-    .h1-a { display: block; color: #fff; }
-    .h1-b { display: block; color: rgba(255,255,255,0.28); }
-
+    .h1-a { display:block;color:#fff; }
+    .h1-b { display:block;color:rgba(255,255,255,0.28); }
     .hero-sub {
-      font-size: 19px;
-      font-weight: 400;
-      color: var(--fg2);
-      line-height: 1.6;
-      letter-spacing: -0.015em;
-      max-width: 420px;
-      margin: 0 auto 48px;
+      font-size:19px;font-weight:400;color:var(--fg2);line-height:1.6;
+      letter-spacing:-0.015em;max-width:440px;margin:0 auto 48px;
     }
-
-    /* ━━━━ INSTALL BOX ━━━━ */
-    .install-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
+    .hero-badges {
+      display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:40px;
     }
+    .badge {
+      display:inline-flex;align-items:center;gap:5px;
+      font-size:11px;font-weight:500;letter-spacing:0.02em;
+      padding:4px 10px;border-radius:980px;
+      border:1px solid;white-space:nowrap;
+    }
+    .badge-blue  { color:var(--blue); border-color:rgba(10,132,255,0.25); background:rgba(10,132,255,0.08); }
+    .badge-green { color:var(--emerald); border-color:rgba(52,211,153,0.25); background:rgba(52,211,153,0.08); }
+    .badge-violet{ color:var(--violet); border-color:rgba(191,90,242,0.25); background:rgba(191,90,242,0.08); }
+    .badge-amber { color:var(--amber); border-color:rgba(255,214,10,0.25); background:rgba(255,214,10,0.08); }
 
+    /* ━━━━━━━━━━━━━━━━━━━━ INSTALL ━━━━━━━━━━━━━━━━━━━━ */
+    .install-wrap { display:flex;flex-direction:column;align-items:center;gap:16px; }
     .install-box {
-      display: inline-flex;
-      align-items: center;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 12px;
-      overflow: hidden;
-      transition: border-color 0.2s;
+      display:inline-flex;align-items:center;
+      background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);
+      border-radius:12px;overflow:hidden;transition:border-color 0.2s;
     }
-
-    .install-box:hover { border-color: rgba(255,255,255,0.22); }
-
-    .install-ps {
-      padding: 0 8px 0 18px;
-      font-family: var(--mono);
-      font-size: 13px;
-      color: var(--fg3);
-      user-select: none;
-    }
-
-    .install-code {
-      padding: 14px 0;
-      font-family: var(--mono);
-      font-size: 13px;
-      color: rgba(255,255,255,0.85);
-      letter-spacing: -0.01em;
-    }
-
+    .install-box:hover { border-color:rgba(255,255,255,0.22); }
+    .install-ps { padding:0 8px 0 18px;font-family:var(--mono);font-size:13px;color:var(--fg3);user-select:none; }
+    .install-code { padding:14px 0;font-family:var(--mono);font-size:13px;color:rgba(255,255,255,0.85);letter-spacing:-0.01em; }
     .install-copy {
-      border: none;
-      border-left: 1px solid rgba(255,255,255,0.08);
-      background: transparent;
-      color: var(--fg3);
-      padding: 14px 18px;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      cursor: pointer;
-      font-family: var(--font);
-      transition: color 0.15s, background 0.15s;
+      border:none;border-left:1px solid rgba(255,255,255,0.08);background:transparent;
+      color:var(--fg3);padding:14px 18px;font-size:12px;font-weight:600;
+      letter-spacing:0.04em;text-transform:uppercase;cursor:pointer;font-family:var(--font);
+      transition:color 0.15s,background 0.15s;
     }
+    .install-copy:hover { color:var(--fg);background:rgba(255,255,255,0.04); }
+    .gh-link { font-size:14px;color:var(--fg3);text-decoration:none;letter-spacing:-0.01em;transition:color 0.2s; }
+    .gh-link:hover { color:var(--fg2); }
 
-    .install-copy:hover { color: var(--fg); background: rgba(255,255,255,0.04); }
+    /* ━━━━━━━━━━━━━━━━━━━━ STATS ━━━━━━━━━━━━━━━━━━━━ */
+    .stats { display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border);border-bottom:1px solid var(--border); }
+    .stat { padding:48px 40px;border-right:1px solid var(--border); }
+    .stat:last-child { border-right:none; }
+    .stat-n { font-size:64px;font-weight:700;letter-spacing:-0.05em;line-height:1;color:#fff;margin-bottom:8px; }
+    .stat-l { font-size:14px;color:var(--fg2);letter-spacing:-0.01em;line-height:1.5; }
 
-    .gh-link {
-      font-size: 14px;
-      color: var(--fg3);
-      text-decoration: none;
-      letter-spacing: -0.01em;
-      transition: color 0.2s;
-    }
+    /* ━━━━━━━━━━━━━━━━━━━━ SHARED SECTION ━━━━━━━━━━━━━━━━━━━━ */
+    .s { max-width:1080px;margin:0 auto;padding:96px 48px; }
+    .s-eye { font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--blue);margin-bottom:20px; }
+    .s-eye.green  { color:var(--emerald); }
+    .s-eye.violet { color:var(--violet); }
+    .s-eye.amber  { color:var(--amber); }
+    .s-eye.pink   { color:var(--pink); }
+    .s-h { font-size:clamp(34px,4.5vw,56px);font-weight:700;letter-spacing:-0.035em;line-height:1.05;margin-bottom:20px; }
+    .s-p { font-size:17px;color:var(--fg2);line-height:1.7;letter-spacing:-0.01em;max-width:460px; }
+    .hr  { border:none;border-top:1px solid var(--border); }
 
-    .gh-link:hover { color: var(--fg2); }
+    /* ━━━━━━━━━━━━━━━━━━━━ BEFORE / AFTER ━━━━━━━━━━━━━━━━━━━━ */
+    .ba { display:grid;grid-template-columns:1fr 1fr;gap:2px;margin-top:56px; }
+    .ba-card { background:var(--bg1);border:1px solid var(--border);border-radius:20px;overflow:hidden; }
+    .ba-card.is-after { border-color:rgba(48,209,88,0.12); }
+    .ba-top { display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:1px solid var(--border); }
+    .ba-tag { font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase; }
+    .ba-tag.bad  { color:var(--red); }
+    .ba-tag.good { color:var(--green); }
+    .ba-pill { font-family:var(--mono);font-size:11px;font-weight:600;padding:3px 9px;border-radius:980px; }
+    .ba-pill.bad  { background:rgba(255,69,58,0.1);color:var(--red);border:1px solid rgba(255,69,58,0.2); }
+    .ba-pill.good { background:rgba(48,209,88,0.1);color:var(--green);border:1px solid rgba(48,209,88,0.2); }
+    .ba-row { display:flex;align-items:center;justify-content:space-between;padding:13px 20px;border-bottom:1px solid var(--border);gap:12px; }
+    .ba-row:last-child { border-bottom:none; }
+    .ba-op  { font-family:var(--mono);font-size:12px;color:var(--fg2); }
+    .ba-val { font-family:var(--mono);font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px;white-space:nowrap; }
+    .ba-val.bad  { color:var(--red); }
+    .ba-val.good { color:var(--green); }
+    .pct-tag { font-family:var(--font);font-size:10px;font-weight:700;padding:2px 6px;border-radius:980px;background:rgba(48,209,88,0.1);color:var(--green);border:1px solid rgba(48,209,88,0.16); }
 
-    /* ━━━━ TOKEN COUNTER HERO VISUAL ━━━━ */
-    .hero-visual {
-      position: relative;
-      z-index: 1;
-      margin-top: 72px;
-      display: flex;
-      justify-content: center;
-      gap: 2px;
-    }
+    /* ━━━━━━━━━━━━━━━━━━━━ TERMINAL ━━━━━━━━━━━━━━━━━━━━ */
+    .term { margin-top:32px;background:#050505;border:1px solid var(--border);border-radius:20px;overflow:hidden; }
+    .term-chrome { display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02);gap:6px; }
+    .dot { width:11px;height:11px;border-radius:50%; }
+    .dr { background:rgba(255,90,80,0.5); } .dy { background:rgba(255,190,50,0.5); } .dg { background:rgba(50,200,100,0.5); }
+    .term-name { margin:0 auto;font-family:var(--mono);font-size:11px;color:var(--fg4);letter-spacing:0.04em; }
+    .term-body { padding:24px;font-family:var(--mono);font-size:13px;line-height:2; }
+    .t-prompt { color:var(--blue); }
+    .t-cmd    { color:#fff; }
+    .t-ok     { color:var(--green); }
+    .t-out    { color:rgba(255,255,255,0.45); }
+    .t-hl     { color:var(--amber); }
+    .t-dim    { color:rgba(255,255,255,0.2); }
+    .t-violet { color:var(--violet); }
+    .t-emerald{ color:var(--emerald); }
+    .t-pink   { color:var(--pink); }
+    .t-indigo { color:var(--indigo); }
+    .t-orange { color:var(--orange); }
 
-    .mini-bar-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .mini-bars {
-      display: flex;
-      align-items: flex-end;
-      gap: 3px;
-      height: 60px;
-    }
-
-    .mbar {
-      width: 6px;
-      border-radius: 3px;
-      background: rgba(255,255,255,0.1);
-      transition: height 1.2s var(--ease), background 1.2s;
-    }
-
-    .mbar.lit { background: rgba(10,132,255,0.7); }
-    .mbar.lit-green { background: rgba(48,209,88,0.7); }
-
-    .mini-label {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--fg4);
-    }
-
-    /* ━━━━ STAT ROW ━━━━ */
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(3,1fr);
-      border-top: 1px solid var(--border);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .stat {
-      padding: 52px 48px;
-      border-right: 1px solid var(--border);
-    }
-
-    .stat:last-child { border-right: none; }
-
-    .stat-n {
-      font-size: 72px;
-      font-weight: 700;
-      letter-spacing: -0.05em;
-      line-height: 1;
-      color: #fff;
-      margin-bottom: 8px;
-    }
-
-    .stat-l {
-      font-size: 14px;
-      color: var(--fg2);
-      letter-spacing: -0.01em;
-      line-height: 1.5;
-    }
-
-    /* ━━━━ SECTION ━━━━ */
-    .s {
-      max-width: 1080px;
-      margin: 0 auto;
-      padding: 96px 48px;
-    }
-
-    .s-eye {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--blue);
-      margin-bottom: 20px;
-    }
-
-    .s-h {
-      font-size: clamp(36px, 4.5vw, 56px);
-      font-weight: 700;
-      letter-spacing: -0.035em;
-      line-height: 1.05;
-      margin-bottom: 20px;
-    }
-
-    .s-p {
-      font-size: 17px;
-      color: var(--fg2);
-      line-height: 1.7;
-      letter-spacing: -0.01em;
-      max-width: 440px;
-    }
-
-    /* ━━━━ BEFORE/AFTER ━━━━ */
-    .ba {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2px;
-      margin-top: 56px;
-    }
-
-    .ba-card {
-      background: #0a0a0a;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      overflow: hidden;
-    }
-
-    .ba-card.is-after {
-      border-color: rgba(48,209,88,0.12);
-    }
-
-    .ba-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .ba-tag {
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .ba-tag.bad  { color: var(--red); }
-    .ba-tag.good { color: var(--green); }
-
-    .ba-pill {
-      font-family: var(--mono);
-      font-size: 11px;
-      font-weight: 600;
-      padding: 3px 9px;
-      border-radius: 980px;
-    }
-
-    .ba-pill.bad  { background: rgba(255,69,58,0.1); color: var(--red); border: 1px solid rgba(255,69,58,0.2); }
-    .ba-pill.good { background: rgba(48,209,88,0.1); color: var(--green); border: 1px solid rgba(48,209,88,0.2); }
-
-    .ba-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 13px 20px;
-      border-bottom: 1px solid var(--border);
-      gap: 12px;
-    }
-
-    .ba-row:last-child { border-bottom: none; }
-
-    .ba-op {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--fg2);
-    }
-
-    .ba-val {
-      font-family: var(--mono);
-      font-size: 12px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-    }
-
-    .ba-val.bad  { color: var(--red); }
-    .ba-val.good { color: var(--green); }
-
-    .pct-tag {
-      font-family: var(--font);
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 980px;
-      background: rgba(48,209,88,0.1);
-      color: var(--green);
-      border: 1px solid rgba(48,209,88,0.16);
-      letter-spacing: 0.01em;
-    }
-
-    /* ━━━━ TERMINAL ━━━━ */
-    .term {
-      margin-top: 32px;
-      background: #050505;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      overflow: hidden;
-    }
-
-    .term-chrome {
-      display: flex;
-      align-items: center;
-      padding: 13px 16px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(255,255,255,0.02);
-      gap: 6px;
-    }
-
-    .dot { width: 11px; height: 11px; border-radius: 50%; }
-    .dr { background: rgba(255,90,80,0.5); }
-    .dy { background: rgba(255,190,50,0.5); }
-    .dg { background: rgba(50,200,100,0.5); }
-
-    .term-name {
-      margin: 0 auto;
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--fg4);
-      letter-spacing: 0.04em;
-    }
-
-    .term-body {
-      padding: 24px;
-      font-family: var(--mono);
-      font-size: 13px;
-      line-height: 2;
-    }
-
-    .t-prompt { color: var(--blue); }
-    .t-cmd    { color: #fff; }
-    .t-ok     { color: var(--green); }
-    .t-out    { color: rgba(255,255,255,0.45); }
-    .t-hl     { color: var(--amber); }
-    .t-dim    { color: rgba(255,255,255,0.2); }
-
-    /* ━━━━ FEATURE GRID ━━━━ */
-    .feat-grid {
-      display: grid;
-      grid-template-columns: repeat(3,1fr);
-      gap: 2px;
-      margin-top: 56px;
-    }
-
+    /* ━━━━━━━━━━━━━━━━━━━━ FEATURE GRID ━━━━━━━━━━━━━━━━━━━━ */
+    .feat-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:56px; }
     .feat {
-      background: #0a0a0a;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 32px;
-      transition: background 0.25s var(--ease), border-color 0.25s var(--ease);
+      background:var(--bg1);border:1px solid var(--border);border-radius:20px;padding:32px;
+      transition:background 0.25s var(--ease),border-color 0.25s var(--ease);
+    }
+    .feat:hover { background:var(--bg2);border-color:var(--border2); }
+    .feat-n { font-family:var(--mono);font-size:11px;color:var(--fg4);letter-spacing:0.06em;margin-bottom:20px; }
+    .feat h3 { font-size:17px;font-weight:600;letter-spacing:-0.02em;margin-bottom:10px;color:#fff;line-height:1.3; }
+    .feat p  { font-size:14px;color:var(--fg2);line-height:1.65;letter-spacing:-0.005em; }
+    .feat-icon { font-size:22px;margin-bottom:14px;display:block; }
+
+    /* ━━━━━━━━━━━━━━━━━━━━ WIKI PAGE TYPES ━━━━━━━━━━━━━━━━━━━━ */
+    .page-type-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin-top:48px; }
+    .pt {
+      background:var(--bg1);border:1px solid var(--border);border-radius:16px;padding:24px;
+      transition:border-color 0.2s,background 0.2s;
+    }
+    .pt:hover { background:var(--bg2);border-color:var(--border2); }
+    .pt-dot { width:10px;height:10px;border-radius:50%;margin-bottom:14px; }
+    .pt h4 { font-size:15px;font-weight:600;letter-spacing:-0.02em;margin-bottom:8px;color:#fff; }
+    .pt p  { font-size:13px;color:var(--fg2);line-height:1.6; }
+    .pt-fields { margin-top:12px;display:flex;flex-direction:column;gap:4px; }
+    .pt-field { font-family:var(--mono);font-size:11px;color:var(--fg3);padding:3px 0;border-top:1px solid var(--border); }
+
+    /* ━━━━━━━━━━━━━━━━━━━━ WIKI WORKFLOW ━━━━━━━━━━━━━━━━━━━━ */
+    .workflow { display:flex;align-items:flex-start;gap:0;margin-top:48px;position:relative; }
+    .workflow::before {
+      content:'';position:absolute;top:20px;left:20px;right:20px;height:1px;
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08) 20%,rgba(255,255,255,0.08) 80%,transparent);
+    }
+    .wf-step { flex:1;text-align:center;padding:0 16px;position:relative;z-index:1; }
+    .wf-num {
+      width:40px;height:40px;border-radius:50%;background:var(--bg1);border:1px solid var(--border2);
+      display:flex;align-items:center;justify-content:center;margin:0 auto 16px;
+      font-family:var(--mono);font-size:12px;font-weight:600;color:var(--fg2);
+    }
+    .wf-step h4 { font-size:14px;font-weight:600;letter-spacing:-0.01em;margin-bottom:6px; }
+    .wf-step p  { font-size:12px;color:var(--fg3);line-height:1.5; }
+
+    /* ━━━━━━━━━━━━━━━━━━━━ GRAPH DEMO ━━━━━━━━━━━━━━━━━━━━ */
+    .graph-demo {
+      margin-top:48px;background:#050505;border:1px solid var(--border);
+      border-radius:20px;overflow:hidden;height:420px;position:relative;
+    }
+    .graph-header {
+      position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:10;
+      display:flex;align-items:center;gap:10px;padding:6px 14px;
+      background:rgba(5,5,5,0.7);backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,0.08);border-radius:8px;
+      font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.5);white-space:nowrap;
+    }
+    .graph-logo { color:#a78bfa;font-weight:700;letter-spacing:0.08em; }
+    .graph-legend {
+      position:absolute;bottom:14px;left:14px;z-index:10;
+      display:flex;flex-direction:column;gap:5px;padding:8px 12px;
+      background:rgba(5,5,5,0.7);backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,0.08);border-radius:8px;
+    }
+    .gl-item { display:flex;align-items:center;gap:6px;font-size:10px;color:rgba(255,255,255,0.35); }
+    .gl-dot  { width:7px;height:7px;border-radius:50%;flex-shrink:0; }
+    #graph-canvas { width:100%;height:100%; }
+
+    /* ━━━━━━━━━━━━━━━━━━━━ PROVENANCE ━━━━━━━━━━━━━━━━━━━━ */
+    .provenance-card {
+      margin-top:48px;background:var(--bg1);border:1px solid var(--border);
+      border-radius:20px;overflow:hidden;
+    }
+    .prov-top {
+      padding:14px 20px;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;
+    }
+    .prov-file { font-family:var(--mono);font-size:12px;color:var(--fg2); }
+    .prov-badge {
+      font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;
+      padding:3px 9px;border-radius:980px;background:rgba(191,90,242,0.1);
+      color:var(--violet);border:1px solid rgba(191,90,242,0.2);
+    }
+    .prov-body { padding:0; }
+    .prov-yaml {
+      padding:20px 24px;font-family:var(--mono);font-size:12.5px;line-height:1.9;
+      border-bottom:1px solid var(--border);
+    }
+    .yaml-key  { color:var(--indigo); }
+    .yaml-val  { color:rgba(255,255,255,0.7); }
+    .yaml-str  { color:var(--emerald); }
+    .yaml-comment { color:rgba(255,255,255,0.2); }
+    .yaml-delim { color:rgba(255,255,255,0.3); }
+    .prov-explain {
+      padding:16px 24px;font-size:13px;color:var(--fg3);line-height:1.6;
     }
 
-    .feat:hover {
-      background: #111;
-      border-color: rgba(255,255,255,0.14);
+    /* ━━━━━━━━━━━━━━━━━━━━ LINT ━━━━━━━━━━━━━━━━━━━━ */
+    .lint-demo {
+      margin-top:48px;background:var(--bg1);border:1px solid var(--border);
+      border-radius:20px;overflow:hidden;
+    }
+    .lint-row {
+      display:flex;align-items:flex-start;gap:16px;padding:16px 20px;
+      border-bottom:1px solid var(--border);transition:background 0.15s;
+    }
+    .lint-row:last-child { border-bottom:none; }
+    .lint-row:hover { background:rgba(255,255,255,0.02); }
+    .lint-icon { font-size:14px;margin-top:1px;flex-shrink:0; }
+    .lint-body { flex:1; }
+    .lint-title { font-size:13px;font-weight:500;color:var(--fg);margin-bottom:3px; }
+    .lint-desc  { font-size:12px;color:var(--fg3);line-height:1.5; }
+    .lint-action {
+      font-size:11px;font-weight:600;letter-spacing:0.04em;padding:3px 9px;
+      border-radius:6px;cursor:default;white-space:nowrap;flex-shrink:0;margin-top:2px;
+    }
+    .la-fix     { background:rgba(255,69,58,0.1);color:var(--red);border:1px solid rgba(255,69,58,0.2); }
+    .la-resolve { background:rgba(255,214,10,0.1);color:var(--amber);border:1px solid rgba(255,214,10,0.2); }
+    .la-warn    { background:rgba(10,132,255,0.1);color:var(--blue);border:1px solid rgba(10,132,255,0.2); }
+    .la-ok      { background:rgba(48,209,88,0.1);color:var(--green);border:1px solid rgba(48,209,88,0.2); }
+
+    /* ━━━━━━━━━━━━━━━━━━━━ COMMANDS ━━━━━━━━━━━━━━━━━━━━ */
+    .cmd-section { margin-top:56px; }
+    .cmd-group-label {
+      font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
+      color:var(--fg4);padding:10px 24px;background:rgba(255,255,255,0.02);
+      border-bottom:1px solid var(--border);border-top:1px solid var(--border);
+    }
+    .cmd-grid { background:var(--bg1);border:1px solid var(--border);border-radius:20px;overflow:hidden; }
+    .cmd-grid + .cmd-grid { margin-top:2px; }
+    .cmd { display:flex;align-items:center;gap:24px;padding:15px 24px;border-bottom:1px solid var(--border);transition:background 0.2s; }
+    .cmd:last-child { border-bottom:none; }
+    .cmd:hover { background:rgba(255,255,255,0.03); }
+    .cmd-k { font-family:var(--mono);font-size:13px;color:rgba(255,255,255,0.7);min-width:230px;flex-shrink:0; }
+    .cmd-k .hl { color:#fff; }
+    .cmd-v { font-size:14px;color:var(--fg2);letter-spacing:-0.01em;flex:1; }
+    .cmd-new {
+      font-size:10px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;
+      padding:2px 7px;border-radius:980px;background:rgba(52,211,153,0.1);
+      color:var(--emerald);border:1px solid rgba(52,211,153,0.2);flex-shrink:0;
     }
 
-    .feat-n {
-      font-family: var(--mono);
-      font-size: 11px;
-      color: var(--fg4);
-      letter-spacing: 0.06em;
-      margin-bottom: 20px;
+    /* ━━━━━━━━━━━━━━━━━━━━ MODES TABLE ━━━━━━━━━━━━━━━━━━━━ */
+    .modes-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:2px;margin-top:48px; }
+    .mode-card {
+      background:var(--bg1);border:1px solid var(--border);border-radius:16px;padding:24px;
+      transition:background 0.2s,border-color 0.2s;
     }
+    .mode-card:hover { background:var(--bg2);border-color:var(--border2); }
+    .mode-name { font-family:var(--mono);font-size:13px;font-weight:600;color:#fff;margin-bottom:10px; }
+    .mode-desc { font-size:13px;color:var(--fg2);line-height:1.6;margin-bottom:14px; }
+    .mode-example { font-family:var(--mono);font-size:11px;color:var(--fg4);padding:10px;background:rgba(0,0,0,0.3);border-radius:8px;line-height:1.7; }
+    .mode-example .ex-in  { color:rgba(255,255,255,0.35); }
+    .mode-example .ex-out { color:rgba(255,255,255,0.6); }
 
-    .feat h3 {
-      font-size: 17px;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      margin-bottom: 10px;
-      color: #fff;
-      line-height: 1.3;
+    /* ━━━━━━━━━━━━━━━━━━━━ STRUCTURED FORMATS ━━━━━━━━━━━━━━━━━━━━ */
+    .format-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:48px; }
+    .fmt {
+      background:var(--bg1);border:1px solid var(--border);border-radius:16px;padding:24px;
+      transition:background 0.2s;
     }
+    .fmt:hover { background:var(--bg2); }
+    .fmt-cmd  { font-family:var(--mono);font-size:12px;color:var(--violet);margin-bottom:14px;font-weight:600; }
+    .fmt h4   { font-size:15px;font-weight:600;letter-spacing:-0.02em;margin-bottom:8px; }
+    .fmt p    { font-size:13px;color:var(--fg2);line-height:1.6;margin-bottom:12px; }
+    .fmt-fields { display:flex;flex-direction:column;gap:3px; }
+    .fmt-field  { font-family:var(--mono);font-size:11px;color:var(--fg4);padding:2px 0;border-top:1px solid var(--border); }
 
-    .feat p {
-      font-size: 14px;
-      color: var(--fg2);
-      line-height: 1.65;
-      letter-spacing: -0.005em;
-    }
+    /* ━━━━━━━━━━━━━━━━━━━━ HOW IT INSTALLS ━━━━━━━━━━━━━━━━━━━━ */
+    .install-steps { display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:48px; }
+    .is { background:var(--bg1);border:1px solid var(--border);border-radius:16px;padding:28px; }
+    .is-n { font-family:var(--mono);font-size:11px;color:var(--fg4);letter-spacing:0.06em;margin-bottom:16px; }
+    .is h4 { font-size:16px;font-weight:600;letter-spacing:-0.02em;margin-bottom:8px; }
+    .is p  { font-size:13px;color:var(--fg2);line-height:1.65; }
 
-    /* ━━━━ COMMANDS ━━━━ */
-    .cmd-grid {
-      margin-top: 56px;
-      background: #0a0a0a;
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      overflow: hidden;
-    }
-
-    .cmd {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-      padding: 16px 24px;
-      border-bottom: 1px solid var(--border);
-      transition: background 0.2s;
-    }
-
-    .cmd:last-child { border-bottom: none; }
-    .cmd:hover { background: rgba(255,255,255,0.03); }
-
-    .cmd-k {
-      font-family: var(--mono);
-      font-size: 13px;
-      color: rgba(255,255,255,0.7);
-      min-width: 210px;
-      flex-shrink: 0;
-    }
-
-    .cmd-v {
-      font-size: 14px;
-      color: var(--fg2);
-      letter-spacing: -0.01em;
-    }
-
-    /* ━━━━ CTA ━━━━ */
-    .cta {
-      text-align: center;
-      padding: 128px 24px;
-      border-top: 1px solid var(--border);
-      position: relative;
-      overflow: hidden;
-    }
-
+    /* ━━━━━━━━━━━━━━━━━━━━ CTA ━━━━━━━━━━━━━━━━━━━━ */
+    .cta { text-align:center;padding:128px 24px;border-top:1px solid var(--border);position:relative;overflow:hidden; }
     .cta-light {
-      position: absolute;
-      width: 700px; height: 400px;
-      background: radial-gradient(ellipse, rgba(10,132,255,0.08) 0%, transparent 65%);
-      top: 0; left: 50%;
-      transform: translateX(-50%);
-      pointer-events: none;
+      position:absolute;width:700px;height:400px;
+      background:radial-gradient(ellipse,rgba(10,132,255,0.08) 0%,transparent 65%);
+      top:0;left:50%;transform:translateX(-50%);pointer-events:none;
     }
+    .cta h2 { font-size:clamp(52px,8vw,96px);font-weight:700;letter-spacing:-0.045em;line-height:0.95;margin-bottom:24px;position:relative; }
+    .cta p  { font-size:19px;color:var(--fg2);letter-spacing:-0.015em;margin-bottom:48px;position:relative; }
 
-    .cta h2 {
-      font-size: clamp(52px, 8vw, 96px);
-      font-weight: 700;
-      letter-spacing: -0.045em;
-      line-height: 0.95;
-      margin-bottom: 24px;
-      position: relative;
-    }
+    /* ━━━━━━━━━━━━━━━━━━━━ FOOTER ━━━━━━━━━━━━━━━━━━━━ */
+    footer { display:flex;justify-content:space-between;align-items:center;padding:20px 48px;border-top:1px solid var(--border);font-size:12px;color:var(--fg3);letter-spacing:-0.01em; }
+    footer a { color:var(--fg3);text-decoration:none;transition:color 0.15s; }
+    footer a:hover { color:var(--fg2); }
+    footer .fl { display:flex;gap:20px; }
 
-    .cta p {
-      font-size: 19px;
-      color: var(--fg2);
-      letter-spacing: -0.015em;
-      margin-bottom: 48px;
-      position: relative;
-    }
+    /* ━━━━━━━━━━━━━━━━━━━━ REVEAL ━━━━━━━━━━━━━━━━━━━━ */
+    .r { opacity:0;transform:translateY(28px);transition:opacity 0.8s var(--ease),transform 0.8s var(--ease); }
+    .r.on { opacity:1;transform:none; }
+    .r.d1 { transition-delay:0.1s; }
+    .r.d2 { transition-delay:0.2s; }
+    .r.d3 { transition-delay:0.3s; }
+    .r.d4 { transition-delay:0.4s; }
 
-    /* ━━━━ FOOTER ━━━━ */
-    footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px 48px;
-      border-top: 1px solid var(--border);
-      font-size: 12px;
-      color: var(--fg3);
-      letter-spacing: -0.01em;
-    }
-
-    footer a { color: var(--fg3); text-decoration: none; transition: color 0.15s; }
-    footer a:hover { color: var(--fg2); }
-    footer .fl { display: flex; gap: 20px; }
-
-    /* ━━━━ DIVIDER ━━━━ */
-    .hr { border: none; border-top: 1px solid var(--border); }
-
-    /* ━━━━ REVEAL ━━━━ */
-    .r {
-      opacity: 0;
-      transform: translateY(28px);
-      transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
-    }
-    .r.on { opacity: 1; transform: none; }
-    .r.d1 { transition-delay: 0.1s; }
-    .r.d2 { transition-delay: 0.2s; }
-    .r.d3 { transition-delay: 0.3s; }
-
-    /* ━━━━ MOBILE ━━━━ */
-    @media (max-width: 740px) {
-      .nav-links { display: none; }
-      .stats { grid-template-columns: 1fr; }
-      .stat { border-right: none; border-bottom: 1px solid var(--border); }
-      .stat:last-child { border-bottom: none; }
-      .s { padding: 72px 24px; }
-      .ba { grid-template-columns: 1fr; }
-      .feat-grid { grid-template-columns: 1fr; }
-      footer { padding: 20px 24px; flex-direction: column; gap: 12px; text-align: center; }
+    /* ━━━━━━━━━━━━━━━━━━━━ RESPONSIVE ━━━━━━━━━━━━━━━━━━━━ */
+    @media (max-width:900px) {
+      .nav-links { display:none; }
+      .stats { grid-template-columns:repeat(2,1fr); }
+      .stat:nth-child(2) { border-right:none; }
+      .stat:nth-child(3),
+      .stat:nth-child(4) { border-top:1px solid var(--border); }
+      .stat:nth-child(4) { border-right:none; }
+      .s { padding:72px 24px; }
+      .ba,.feat-grid,.page-type-grid,.modes-grid,.format-grid,.install-steps { grid-template-columns:1fr; }
+      .workflow { flex-direction:column;gap:24px; }
+      .workflow::before { display:none; }
+      .graph-demo { height:300px; }
+      footer { padding:20px 24px;flex-direction:column;gap:12px;text-align:center; }
     }
   </style>
 </head>
 <body>
 
-<!-- NAV -->
+<!-- ━━━━━━━━━━━━━━━━━━━━ NAV ━━━━━━━━━━━━━━━━━━━━ -->
 <nav>
   <a class="logo" href="#">Pith</a>
   <ul class="nav-links">
-    <li><a href="#how">How it works</a></li>
-    <li><a href="#features">Features</a></li>
+    <li><a href="#compression">Compression</a></li>
+    <li><a href="#layers">Layers</a></li>
+    <li><a href="#wiki">Wiki</a></li>
+    <li><a href="#graph">Graph</a></li>
+    <li><a href="#provenance">Provenance</a></li>
+    <li><a href="#session">Sessions</a></li>
     <li><a href="#commands">Commands</a></li>
   </ul>
   <a class="btn-nav" href="https://github.com/abhisekjha/pith" target="_blank">Install free</a>
 </nav>
 
-<!-- HERO -->
+<!-- ━━━━━━━━━━━━━━━━━━━━ HERO ━━━━━━━━━━━━━━━━━━━━ -->
 <section class="hero">
   <div class="hero-mesh">
     <div class="mesh-orb m1"></div>
     <div class="mesh-orb m2"></div>
     <div class="mesh-orb m3"></div>
+    <div class="mesh-orb m4"></div>
   </div>
 
   <div class="hero-inner">
@@ -664,12 +443,19 @@
 
     <h1 class="r on d1">
       <span class="h1-a">fewer tokens.</span>
-      <span class="h1-b">same result.</span>
+      <span class="h1-b">smarter sessions.</span>
     </h1>
 
     <p class="hero-sub r on d2">
-      40–60% token reduction, automatic. Install once — works in every Claude Code project from that point on.
+      40–60% token reduction, automatic. Project wiki. Interactive knowledge graph. Install once — works in every Claude Code project from that point on.
     </p>
+
+    <div class="hero-badges r on d2">
+      <span class="badge badge-blue">Token compression</span>
+      <span class="badge badge-green">Project wiki</span>
+      <span class="badge badge-violet">Knowledge graph</span>
+      <span class="badge badge-amber">YAML provenance</span>
+    </div>
 
     <div class="install-wrap r on d3">
       <div class="install-box">
@@ -682,11 +468,11 @@
   </div>
 </section>
 
-<!-- STATS -->
+<!-- ━━━━━━━━━━━━━━━━━━━━ STATS ━━━━━━━━━━━━━━━━━━━━ -->
 <div class="stats r">
   <div class="stat">
     <div class="stat-n" id="c1">0%</div>
-    <div class="stat-l">token reduction on<br>large file reads</div>
+    <div class="stat-l">token reduction<br>on large file reads</div>
   </div>
   <div class="stat">
     <div class="stat-n">0</div>
@@ -696,15 +482,80 @@
     <div class="stat-n">∞</div>
     <div class="stat-l">session length<br>with auto-compact</div>
   </div>
+  <div class="stat">
+    <div class="stat-n" id="c4">0</div>
+    <div class="stat-l">wiki page types<br>auto-maintained</div>
+  </div>
 </div>
 
 <hr class="hr" />
 
-<!-- HOW IT WORKS -->
-<div class="s r" id="how">
+<!-- ━━━━━━━━━━━━━━━━━━━━ TWO LAYERS ━━━━━━━━━━━━━━━━━━━━ -->
+<div class="s r" id="layers">
+  <div class="s-eye">Architecture</div>
+  <h2 class="s-h">Two layers.<br>One always on.</h2>
+  <p class="s-p">Pith runs as two independent layers. The infrastructure layer is permanent — it activates on install and never turns off. The style compression layer is togglable — switch it on, off, or change modes mid-session without affecting anything else.</p>
+
+  <div class="ba" style="margin-top:48px">
+    <div class="ba-card" style="border-color:rgba(10,132,255,0.15)">
+      <div class="ba-top">
+        <span class="ba-tag" style="color:var(--blue)">Layer 1 — Infrastructure</span>
+        <span class="ba-pill" style="background:rgba(10,132,255,0.1);color:var(--blue);border:1px solid rgba(10,132,255,0.2)">Always on</span>
+      </div>
+      <div class="ba-row"><span class="ba-op">Context window tracking</span><span class="ba-val" style="color:var(--blue)">PITH 503/200k</span></div>
+      <div class="ba-row"><span class="ba-op">Token meter + statusline</span><span class="ba-val" style="color:var(--blue)">Every session</span></div>
+      <div class="ba-row"><span class="ba-op">Tool output compression</span><span class="ba-val" style="color:var(--blue)">File / bash / grep</span></div>
+      <div class="ba-row"><span class="ba-op">Auto-compact at 70%</span><span class="ba-val" style="color:var(--blue)">Automatic</span></div>
+      <div class="ba-row"><span class="ba-op">Wiki system</span><span class="ba-val" style="color:var(--blue)">Ingest / query / lint</span></div>
+      <div class="ba-row"><span class="ba-op">Session state saving</span><span class="ba-val" style="color:var(--blue)">On every exit</span></div>
+      <div class="ba-row"><span class="ba-op">YAML provenance tracking</span><span class="ba-val" style="color:var(--blue)">All wiki writes</span></div>
+      <div class="ba-row"><span class="ba-op">Knowledge graph</span><span class="ba-val" style="color:var(--blue)">/pith-graph</span></div>
+    </div>
+    <div class="ba-card" style="border-color:rgba(52,211,153,0.12)">
+      <div class="ba-top">
+        <span class="ba-tag" style="color:var(--emerald)">Layer 2 — Style compression</span>
+        <span class="ba-pill" style="background:rgba(52,211,153,0.1);color:var(--emerald);border:1px solid rgba(52,211,153,0.2)">Togglable</span>
+      </div>
+      <div class="ba-row"><span class="ba-op">/pith lean</span><span class="ba-val" style="color:var(--emerald)">Default — drop filler</span></div>
+      <div class="ba-row"><span class="ba-op">/pith precise</span><span class="ba-val" style="color:var(--emerald)">No filler, full sentences</span></div>
+      <div class="ba-row"><span class="ba-op">/pith ultra</span><span class="ba-val" style="color:var(--emerald)">Max — arrows, tables</span></div>
+      <div class="ba-row"><span class="ba-op">/pith off</span><span class="ba-val" style="color:var(--fg3)">Disabled — raw Claude output</span></div>
+      <div class="ba-row" style="border-bottom:none;padding-top:20px">
+        <span class="ba-op" style="color:var(--fg4);font-size:11px">Mode OFF means Layer 2 is disabled. Layer 1 keeps running — context tracking, wiki, token meter, and tool compression all stay active.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="term r" style="margin-top:32px">
+    <div class="term-chrome">
+      <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+      <span class="term-name">two layers in action</span>
+    </div>
+    <div class="term-body">
+      <div><span class="t-dim">── Layer 1 always visible in statusline ────────────</span></div>
+      <div><span class="t-dim">  PITH 503/200k &nbsp; ← context tracking, always on</span></div>
+      <br>
+      <div><span class="t-dim">── /pith status shows both layers ──────────────────</span></div>
+      <div><span class="t-violet">◆ PITH · SESSION STATUS</span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Context &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [░░░░░░░░░░░░░░░░░░░░] &nbsp;0%</span>&nbsp;&nbsp;<span class="t-dim">← Layer 1</span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Mode &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-dim">OFF</span></span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="t-dim">← Layer 2</span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Budget &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; none</span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Total Saved &nbsp;&nbsp;&nbsp;&nbsp; <span class="t-ok">~714 (52%)</span></span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="t-dim">← Layer 1 savings</span></div>
+      <br>
+      <div><span class="t-dim">── Layer 2 off, Layer 1 still compressing tools ────</span></div>
+      <div><span class="t-prompt">$</span> <span class="t-cmd">/pith lean</span>&nbsp;&nbsp;<span class="t-dim">← re-enable Layer 2</span></div>
+      <div><span class="t-ok">✓</span> <span class="t-out">Mode → <span class="t-emerald">LEAN</span>. Tool compression was already running.</span></div>
+    </div>
+  </div>
+</div>
+
+<hr class="hr" />
+
+<!-- ━━━━━━━━━━━━━━━━━━━━ HOW IT WORKS / COMPRESSION ━━━━━━━━━━━━━━━━━━━━ -->
+<div class="s r" id="compression">
   <div class="s-eye">How it works</div>
   <h2 class="s-h">Automatic compression<br>where it matters most.</h2>
-  <p class="s-p">The biggest token sink isn't your prompts — it's tool output. Pith intercepts file reads, bash results, and grep matches. Claude gets the signal, not the scroll.</p>
+  <p class="s-p">The biggest token sink isn't your prompts — it's tool output. Pith intercepts file reads, bash results, and grep matches before they hit the context window. Claude gets the signal, not the scroll.</p>
 
   <div class="ba">
     <div class="ba-card">
@@ -717,7 +568,6 @@
       <div class="ba-row"><span class="ba-op">Grep: findAll errors</span><span class="ba-val bad">380</span></div>
       <div class="ba-row"><span class="ba-op">Read config.json</span><span class="ba-val bad">290</span></div>
     </div>
-
     <div class="ba-card is-after">
       <div class="ba-top">
         <span class="ba-tag good">With Pith</span>
@@ -732,94 +582,661 @@
 
   <div class="term r">
     <div class="term-chrome">
-      <div class="dot dr"></div>
-      <div class="dot dy"></div>
-      <div class="dot dg"></div>
+      <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
       <span class="term-name">claude — pith active</span>
     </div>
     <div class="term-body">
       <div><span class="t-prompt">$</span> <span class="t-cmd">/pith ultra</span></div>
       <div><span class="t-ok">✓</span> <span class="t-out">Ultra compression on — arrows →, tables over prose, abbreviate freely</span></div>
       <br>
-      <div><span class="t-prompt">$</span> <span class="t-cmd">/pith wiki "how does auth work?"</span></div>
-      <div><span class="t-ok">→</span> <span class="t-out">Auth: JWT + refresh tokens, httpOnly cookie. Middleware: <span class="t-hl">src/middleware/auth.ts</span></span></div>
-      <div>&nbsp;&nbsp;<span class="t-out">Decision: cookies &gt; localStorage (XSS). Adopted 2024-11.</span></div>
-      <br>
       <div><span class="t-prompt">$</span> <span class="t-cmd">/budget 150</span></div>
       <div><span class="t-ok">✓</span> <span class="t-out">Token ceiling: 150. Enforced.</span></div>
       <br>
-      <div><span class="t-dim">● PITH:ULTRA &nbsp; 14k / 200k &nbsp; ▓▓░░░░░░░░░░░░░░░░░░</span></div>
+      <div><span class="t-prompt">$</span> <span class="t-cmd">/pith status</span></div>
+      <div><span class="t-dim">◆ PITH · SESSION STATUS</span></div>
+      <div><span class="t-dim">&nbsp;&nbsp;Context &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [▓▓▓░░░░░░░░░░░░░░░░░]&nbsp; 14%</span></div>
+      <div><span class="t-dim">&nbsp;&nbsp;Mode &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-ok">ULTRA</span></span></div>
+      <div><span class="t-dim">&nbsp;&nbsp;Budget &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 150 tok/resp</span></div>
+      <div><span class="t-dim">&nbsp;&nbsp;Model &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Sonnet 4.6 (in $3.0/1M · out $15.0/1M)</span></div>
+      <br>
+      <div><span class="t-dim">&nbsp;&nbsp;Tokens</span></div>
+      <div><span class="t-dim">&nbsp;&nbsp;Total Saved &nbsp;&nbsp;&nbsp;&nbsp; <span class="t-ok">~2,840 (52%)</span></span></div>
+      <div><span class="t-dim">&nbsp;&nbsp;Without Pith &nbsp;&nbsp;&nbsp; 5,912</span></div>
+      <br>
+      <div><span class="t-dim">&nbsp;&nbsp;Cost (this session)</span></div>
+      <div><span class="t-dim">&nbsp;&nbsp;Tokens in &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 3,072 → $0.0092</span></div>
+      <div><span class="t-dim">&nbsp;&nbsp;Tokens out &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 420 → $0.0063</span></div>
+      <div><span class="t-dim">&nbsp;&nbsp;Actual spend &nbsp;&nbsp;&nbsp; <span style="color:var(--yellow)">$0.0155</span></span></div>
+      <div><span class="t-dim">&nbsp;&nbsp;Cost saved &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <span class="t-ok">$0.0085</span></span></div>
+      <div><span class="t-dim">&nbsp;&nbsp;Without Pith &nbsp;&nbsp;&nbsp; <span style="color:#e06c75">$0.0240</span></span></div>
+      <br>
+      <div><span class="t-dim">&nbsp;&nbsp;Lifetime</span></div>
+      <div><span class="t-dim">&nbsp;&nbsp;Tokens saved &nbsp;&nbsp;&nbsp; ~7,700</span></div>
+      <div><span class="t-dim">&nbsp;&nbsp;Cost saved &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; $0.0230</span></div>
     </div>
   </div>
 </div>
 
 <hr class="hr" />
 
-<!-- FEATURES -->
+<!-- ━━━━━━━━━━━━━━━━━━━━ OUTPUT MODES ━━━━━━━━━━━━━━━━━━━━ -->
+<div class="s r">
+  <div class="s-eye">Output modes</div>
+  <h2 class="s-h">One command.<br>Four levels of compression.</h2>
+  <p class="s-p">Switch between modes instantly. Pith remembers your setting for the session — no flags, no config.</p>
+
+  <div class="modes-grid">
+    <div class="mode-card">
+      <div class="mode-name">/pith lean</div>
+      <div class="mode-desc">Default. Drop articles and filler. Short synonyms. Fragments OK. Best balance of readability and compression.</div>
+      <div class="mode-example">
+        <div class="ex-in">IN: "I would like to suggest that you consider..."</div>
+        <div class="ex-out">OUT: "Consider..."</div>
+      </div>
+    </div>
+    <div class="mode-card">
+      <div class="mode-name">/pith precise</div>
+      <div class="mode-desc">Professional and tight. No filler, full sentences kept. Use for docs, PRs, and communication.</div>
+      <div class="mode-example">
+        <div class="ex-in">IN: verbose explanation with hedges</div>
+        <div class="ex-out">OUT: clean technical prose, no hedging</div>
+      </div>
+    </div>
+    <div class="mode-card">
+      <div class="mode-name">/pith ultra</div>
+      <div class="mode-desc">Maximum compression. Arrows → over prose. Tables over lists. Abbreviate freely. Use when every token counts.</div>
+      <div class="mode-example">
+        <div class="ex-in">IN: multi-sentence explanation</div>
+        <div class="ex-out">OUT: A → B → C. Done.</div>
+      </div>
+    </div>
+    <div class="mode-card">
+      <div class="mode-name">/pith off</div>
+      <div class="mode-desc">Back to standard Claude output. No compression, no modification. Full fidelity when you need it.</div>
+      <div class="mode-example">
+        <div class="ex-in">IN: any prompt</div>
+        <div class="ex-out">OUT: unmodified Claude response</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="hr" />
+
+<!-- ━━━━━━━━━━━━━━━━━━━━ WIKI SYSTEM ━━━━━━━━━━━━━━━━━━━━ -->
+<div class="s r" id="wiki">
+  <div class="s-eye green">Project Wiki</div>
+  <h2 class="s-h">Your project's memory.<br>Built automatically.</h2>
+  <p class="s-p">First session in a new project, Pith creates a wiki. Every decision, architecture choice, and bug resolution gets captured as you work — without interrupting your flow.</p>
+
+  <div class="page-type-grid">
+    <div class="pt">
+      <div class="pt-dot" style="background:#34d399"></div>
+      <h4>Decision</h4>
+      <p>Architecture and technology choices with full context — why it was decided, what was rejected, and what it constrains.</p>
+      <div class="pt-fields">
+        <div class="pt-field">date · status</div>
+        <div class="pt-field">context · options table</div>
+        <div class="pt-field">decision · consequences</div>
+      </div>
+    </div>
+    <div class="pt">
+      <div class="pt-dot" style="background:#818cf8"></div>
+      <h4>Concept</h4>
+      <p>Ideas, patterns, and principles — how they work, why they matter, open questions, and concrete examples.</p>
+      <div class="pt-fields">
+        <div class="pt-field">definition · why it matters</div>
+        <div class="pt-field">how it works · related</div>
+        <div class="pt-field">examples · open questions</div>
+      </div>
+    </div>
+    <div class="pt">
+      <div class="pt-dot" style="background:#fb923c"></div>
+      <h4>Entity</h4>
+      <p>People, tools, services, and components — key facts, connections to other entities, and source citations.</p>
+      <div class="pt-fields">
+        <div class="pt-field">type · summary</div>
+        <div class="pt-field">key facts</div>
+        <div class="pt-field">connections · sources</div>
+      </div>
+    </div>
+    <div class="pt">
+      <div class="pt-dot" style="background:#f472b6"></div>
+      <h4>Synthesis</h4>
+      <p>Analysis pages with a thesis, evidence, counter-evidence, and a confidence rating. For conclusions that span multiple sources.</p>
+      <div class="pt-fields">
+        <div class="pt-field">thesis · confidence</div>
+        <div class="pt-field">evidence · counter-evidence</div>
+        <div class="pt-field">open questions</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="workflow r">
+    <div class="wf-step">
+      <div class="wf-num">01</div>
+      <h4>Ingest a source</h4>
+      <p>/pith ingest &lt;file&gt;<br>Pith reads and extracts entities, claims, contradictions</p>
+    </div>
+    <div class="wf-step">
+      <div class="wf-num">02</div>
+      <h4>Review diff</h4>
+      <p>Shows what will be created or updated — confirm before any write</p>
+    </div>
+    <div class="wf-step">
+      <div class="wf-num">03</div>
+      <h4>Wiki updates</h4>
+      <p>Pages written, index.md updated, log.md appended</p>
+    </div>
+    <div class="wf-step">
+      <div class="wf-num">04</div>
+      <h4>Query anytime</h4>
+      <p>/pith wiki "&lt;question&gt;"<br>Synthesizes answer with citations</p>
+    </div>
+    <div class="wf-step">
+      <div class="wf-num">05</div>
+      <h4>Lint regularly</h4>
+      <p>/pith lint finds orphans, stale claims, and semantic contradictions</p>
+    </div>
+  </div>
+
+  <div class="term r">
+    <div class="term-chrome">
+      <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+      <span class="term-name">pith wiki</span>
+    </div>
+    <div class="term-body">
+      <div><span class="t-prompt">$</span> <span class="t-cmd">/pith ingest docs/auth-spec.md</span></div>
+      <div><span class="t-ok">→</span> <span class="t-out">Found: <span class="t-hl">3 entities</span>, <span class="t-emerald">2 new concepts</span>, <span class="t-pink">1 contradiction</span></span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Will update: <span class="t-hl">[[auth-middleware]]</span>, <span class="t-hl">[[session-tokens]]</span></span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Will create: <span class="t-emerald">[[JWT-refresh-flow]]</span></span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Contradiction: "httpOnly cookie" vs "localStorage" — needs resolution</span></div>
+      <div><span class="t-ok">?</span> <span class="t-out">Confirm? [y/n]</span></div>
+      <br>
+      <div><span class="t-prompt">$</span> <span class="t-cmd">/pith wiki "how does auth work?"</span></div>
+      <div><span class="t-ok">→</span> <span class="t-out">Based on <span class="t-hl">[[auth-middleware]]</span> and <span class="t-hl">[[JWT-refresh-flow]]</span>:</span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Auth: JWT + refresh tokens, httpOnly cookie. Decision: cookies &gt; localStorage (XSS).</span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Middleware: <span class="t-hl">src/middleware/auth.ts</span>. Adopted 2024-11.</span></div>
+    </div>
+  </div>
+</div>
+
+<hr class="hr" />
+
+<!-- ━━━━━━━━━━━━━━━━━━━━ KNOWLEDGE GRAPH ━━━━━━━━━━━━━━━━━━━━ -->
+<div class="s r" id="graph">
+  <div class="s-eye violet">Knowledge Graph</div>
+  <h2 class="s-h">See the whole wiki<br>as a living network.</h2>
+  <p class="s-p"><code style="font-family:var(--mono);font-size:15px;color:rgba(255,255,255,0.7)">/pith-graph</code> scans every wiki page, extracts <code style="font-family:var(--mono);font-size:14px;color:rgba(255,255,255,0.7)">[[wikilinks]]</code>, and renders a zero-dependency interactive graph. No Obsidian, no framework. One command — browser opens instantly.</p>
+
+  <div class="graph-demo r">
+    <div class="graph-header">
+      <span class="graph-logo">◆ PITH WIKI</span>
+      <span style="opacity:0.3">·</span>
+      <span id="graph-stats">loading…</span>
+      <span style="opacity:0.3">·</span>
+      <span style="opacity:0.5;font-size:10px">hover a node to focus</span>
+    </div>
+    <div class="graph-legend">
+      <div class="gl-item"><div class="gl-dot" style="background:#34d399"></div>Decisions</div>
+      <div class="gl-item"><div class="gl-dot" style="background:#818cf8"></div>Concepts</div>
+      <div class="gl-item"><div class="gl-dot" style="background:#fb923c"></div>Entities</div>
+      <div class="gl-item"><div class="gl-dot" style="background:#f472b6"></div>Syntheses</div>
+    </div>
+    <svg id="graph-canvas"></svg>
+  </div>
+
+  <div class="feat-grid r" style="margin-top:2px">
+    <div class="feat">
+      <span class="feat-icon">🎯</span>
+      <h3>Focus hover</h3>
+      <p>Hover any node — the entire graph dims to 10% opacity. Only the hovered node and its direct 1st-degree connections stay at full brightness. Instantly trace dependencies without visual noise.</p>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">💊</span>
+      <h3>Label pills</h3>
+      <p>Every node label sits on a semi-transparent dark pill that masks lines behind it. Stays legible at 50 nodes, 200 nodes, or more — no overlapping text.</p>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">☀︎</span>
+      <h3>Light / dark mode</h3>
+      <p>One-click toggle between dark canvas and warm light mode. Pill backgrounds, text colours, and link tints all update live — no reload.</p>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">🧲</span>
+      <h3>Force-directed physics</h3>
+      <p>Nodes repel each other; links act as springs. Drag any node and the simulation reacts. Zoom and pan the full canvas. Ghost nodes show referenced-but-missing pages.</p>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">🎨</span>
+      <h3>Type-coded colours</h3>
+      <p>Emerald for decisions. Indigo for concepts. Amber for entities. Pink for syntheses. Each node has a matching glow so it pops off the dark canvas.</p>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">📦</span>
+      <h3>Zero dependencies</h3>
+      <p>Output is a single standalone HTML file. D3.js from CDN. No install, no build step, no framework. Share the file with anyone — it runs anywhere.</p>
+    </div>
+  </div>
+</div>
+
+<hr class="hr" />
+
+<!-- ━━━━━━━━━━━━━━━━━━━━ YAML PROVENANCE ━━━━━━━━━━━━━━━━━━━━ -->
+<div class="s r" id="provenance">
+  <div class="s-eye amber">YAML Provenance</div>
+  <h2 class="s-h">Every claim traceable<br>to its source.</h2>
+  <p class="s-p">Every wiki page Pith creates or updates carries YAML frontmatter linking back to the exact source — raw file, GitHub PR, or Claude session timestamp. If the AI hallucinates, you can trace it.</p>
+
+  <div class="provenance-card r">
+    <div class="prov-top">
+      <span class="prov-file">wiki/decisions/auth-middleware.md</span>
+      <span class="prov-badge">Provenance block</span>
+    </div>
+    <div class="prov-body">
+      <div class="prov-yaml">
+<span class="yaml-delim">---</span>
+<span class="yaml-key">title</span><span class="yaml-val">: </span><span class="yaml-str">auth-middleware</span>
+<span class="yaml-key">type</span><span class="yaml-val">: </span><span class="yaml-str">decision</span>
+<span class="yaml-key">created</span><span class="yaml-val">: </span><span class="yaml-str">2026-04-15T14:32:00Z</span>
+<span class="yaml-key">updated</span><span class="yaml-val">: </span><span class="yaml-str">2026-04-15T18:44:00Z</span>
+<span class="yaml-key">sources</span><span class="yaml-val">:</span>
+<span class="yaml-val">  - </span><span class="yaml-key">type</span><span class="yaml-val">: </span><span class="yaml-str">file</span>
+<span class="yaml-val">    </span><span class="yaml-key">path</span><span class="yaml-val">: </span><span class="yaml-str">raw/sources/auth-spec.md</span>
+<span class="yaml-val">    </span><span class="yaml-key">ingested</span><span class="yaml-val">: </span><span class="yaml-str">2026-04-15T14:32:00Z</span>
+<span class="yaml-val">  - </span><span class="yaml-key">type</span><span class="yaml-val">: </span><span class="yaml-str">claude-session</span>
+<span class="yaml-val">    </span><span class="yaml-key">session_date</span><span class="yaml-val">: </span><span class="yaml-str">2026-04-15</span>
+<span class="yaml-val">    </span><span class="yaml-key">note</span><span class="yaml-val">: </span><span class="yaml-str">"Decision reached during auth refactor discussion"</span>
+<span class="yaml-key">confidence</span><span class="yaml-val">: </span><span class="yaml-str">high</span>
+<span class="yaml-key">contradictions</span><span class="yaml-val">: </span><span class="yaml-str">none</span>
+<span class="yaml-delim">---</span>
+      </div>
+      <div class="prov-explain">
+        Raw source files in <code style="font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.5)">wiki/raw/sources/</code> are <strong>immutable</strong> — Pith never modifies them. The provenance block on derived pages always points back to the original. If a claim looks wrong, follow the chain.
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="hr" />
+
+<!-- ━━━━━━━━━━━━━━━━━━━━ SEMANTIC LINT ━━━━━━━━━━━━━━━━━━━━ -->
+<div class="s r">
+  <div class="s-eye pink">Semantic Lint</div>
+  <h2 class="s-h">Contradictions surface<br>automatically.</h2>
+  <p class="s-p"><code style="font-family:var(--mono);font-size:15px;color:rgba(255,255,255,0.7)">/pith lint</code> goes beyond broken links. It performs semantic clash detection — if a new ingest says "migrating to AWS" and an existing page says "strictly GCP", lint flags it and asks you which is the new source of truth.</p>
+
+  <div class="lint-demo r">
+    <div class="lint-row">
+      <span class="lint-icon">🔴</span>
+      <div class="lint-body">
+        <div class="lint-title">Semantic contradiction — cloud provider</div>
+        <div class="lint-desc"><strong>[[infra-decisions]]</strong> states "strictly on Google Cloud" · <strong>[[q2-migration]]</strong> states "migrating to AWS" — which is current?</div>
+      </div>
+      <span class="lint-action la-resolve">Resolve</span>
+    </div>
+    <div class="lint-row">
+      <span class="lint-icon">🟡</span>
+      <div class="lint-body">
+        <div class="lint-title">Orphan page — no inbound links</div>
+        <div class="lint-desc"><strong>[[legacy-auth-flow]]</strong> is not referenced by any other page or index.md. May be stale.</div>
+      </div>
+      <span class="lint-action la-fix">Orphan</span>
+    </div>
+    <div class="lint-row">
+      <span class="lint-icon">🟡</span>
+      <div class="lint-body">
+        <div class="lint-title">Stale contradiction — unresolved for 32 days</div>
+        <div class="lint-desc">Contradiction in <strong>[[auth-middleware]]</strong> flagged on 2026-03-14 — "httpOnly cookie" vs "localStorage" — still unresolved.</div>
+      </div>
+      <span class="lint-action la-warn">Stale</span>
+    </div>
+    <div class="lint-row">
+      <span class="lint-icon">🔵</span>
+      <div class="lint-body">
+        <div class="lint-title">index.md pointer to missing file</div>
+        <div class="lint-desc">index.md references <strong>[[redis-caching]]</strong> but no file exists at <code style="font-family:var(--mono);font-size:11px">wiki/concepts/redis-caching.md</code></div>
+      </div>
+      <span class="lint-action la-fix">Missing</span>
+    </div>
+    <div class="lint-row">
+      <span class="lint-icon">🟢</span>
+      <div class="lint-body">
+        <div class="lint-title">Pages with no sources</div>
+        <div class="lint-desc">0 pages lack source citations — all provenance blocks present.</div>
+      </div>
+      <span class="lint-action la-ok">Clean</span>
+    </div>
+  </div>
+</div>
+
+<hr class="hr" />
+
+<!-- ━━━━━━━━━━━━━━━━━━━━ STRUCTURED FORMATS ━━━━━━━━━━━━━━━━━━━━ -->
+<div class="s r">
+  <div class="s-eye">Structured formats</div>
+  <h2 class="s-h">The right shape<br>for every task.</h2>
+  <p class="s-p">One-shot formats that force Claude's output into a predictable, scannable structure. No summaries, no prose padding — just the signal.</p>
+
+  <div class="format-grid">
+    <div class="fmt">
+      <div class="fmt-cmd">/pith debug</div>
+      <h4>Debug</h4>
+      <p>Structured diagnosis for errors, crashes, and unexpected behaviour.</p>
+      <div class="fmt-fields">
+        <div class="fmt-field">Problem</div>
+        <div class="fmt-field">Cause</div>
+        <div class="fmt-field">Fix</div>
+        <div class="fmt-field">Verify</div>
+      </div>
+    </div>
+    <div class="fmt">
+      <div class="fmt-cmd">/pith review</div>
+      <h4>Code review</h4>
+      <p>One line per issue. No summaries. Use for PRs, diffs, and file reviews.</p>
+      <div class="fmt-fields">
+        <div class="fmt-field">Issue · file:line</div>
+        <div class="fmt-field">Severity · suggestion</div>
+        <div class="fmt-field">(repeat per issue)</div>
+      </div>
+    </div>
+    <div class="fmt">
+      <div class="fmt-cmd">/pith arch</div>
+      <h4>Architecture</h4>
+      <p>Technology choices, design decisions, system design questions.</p>
+      <div class="fmt-fields">
+        <div class="fmt-field">Decision</div>
+        <div class="fmt-field">Options table</div>
+        <div class="fmt-field">Choice · Risks · Next</div>
+      </div>
+    </div>
+    <div class="fmt">
+      <div class="fmt-cmd">/pith plan</div>
+      <h4>Planning</h4>
+      <p>Feature planning, task breakdowns, sprint planning, implementation plans.</p>
+      <div class="fmt-fields">
+        <div class="fmt-field">Goal</div>
+        <div class="fmt-field">Steps</div>
+        <div class="fmt-field">Risks · Done-when</div>
+      </div>
+    </div>
+    <div class="fmt">
+      <div class="fmt-cmd">/pith commit</div>
+      <h4>Commit message</h4>
+      <p>Conventional Commits format. Subject ≤50 chars. Reads staged diff automatically.</p>
+      <div class="fmt-fields">
+        <div class="fmt-field">type(scope): subject</div>
+        <div class="fmt-field">body — what + why</div>
+        <div class="fmt-field">breaking changes</div>
+      </div>
+    </div>
+    <div class="fmt">
+      <div class="fmt-cmd">/pith tour</div>
+      <h4>Guided tour</h4>
+      <p>Interactive walkthrough of every Pith feature — hands-on, one step at a time, resumable.</p>
+      <div class="fmt-fields">
+        <div class="fmt-field">Compression modes</div>
+        <div class="fmt-field">Wiki system</div>
+        <div class="fmt-field">Graph · Provenance</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="hr" />
+
+<!-- ━━━━━━━━━━━━━━━━━━━━ ALL FEATURES ━━━━━━━━━━━━━━━━━━━━ -->
 <div class="s r" id="features">
-  <div class="s-eye">Features</div>
-  <h2 class="s-h">Everything automatic.<br>Nothing in the way.</h2>
-  <p class="s-p">Zero-config defaults that work from install. On-demand commands when you want more control. Nothing in between.</p>
+  <div class="s-eye">Everything</div>
+  <h2 class="s-h">Every feature.<br>Every detail.</h2>
+  <p class="s-p">Pith is installed once, globally. It activates automatically in every Claude Code project — no per-project setup, no CLAUDE.md edits required.</p>
 
   <div class="feat-grid">
     <div class="feat">
       <div class="feat-n">01</div>
       <h3>Tool output compression</h3>
-      <p>File reads become skeletons — imports, signatures, types. Bash returns errors and summary. Grep caps at 25 matches. Automatic, always on.</p>
+      <p>File reads return imports, signatures, and types — not every line. Bash returns errors and a summary. Grep caps at 25 matches. Automatic, session-wide, always on.</p>
     </div>
     <div class="feat">
       <div class="feat-n">02</div>
-      <h3>Live token meter</h3>
-      <p>Exact context window usage in the status line — mode-aware, always visible. Know where you stand before you hit the wall.</p>
+      <h3>Live context meter</h3>
+      <p>Exact context window usage, current mode, token budget, tokens compressed, and cost saved — all visible via <code style="font-family:var(--mono);font-size:11px">/pith status</code> or the session statusline.</p>
     </div>
     <div class="feat">
       <div class="feat-n">03</div>
       <h3>Auto-compact at 70%</h3>
-      <p>History is summarized automatically before the window fills. Sessions run indefinitely. No more "context limit reached" mid-task.</p>
+      <p>History is summarised automatically before the context window fills. Sessions run indefinitely. No more "context limit reached" mid-task.</p>
     </div>
     <div class="feat">
       <div class="feat-n">04</div>
       <h3>Project wiki</h3>
-      <p>First session in a new project, Pith builds a wiki. Decisions, architecture, entities — it writes itself as you work. Searchable anytime.</p>
+      <p>Four page types — Decision, Concept, Entity, Synthesis — written and maintained as you work. Cross-linked, sourced, and queryable at any time.</p>
     </div>
     <div class="feat">
       <div class="feat-n">05</div>
-      <h3>Output modes</h3>
-      <p>Lean for everyday work. Precise for docs and PRs. Ultra when every token counts. Switch with a single command.</p>
+      <h3>Interactive knowledge graph</h3>
+      <p>Force-directed D3.js graph of your entire wiki. Focus hover, pill labels, light/dark mode, zoom/pan, drag physics. Standalone HTML — zero dependencies.</p>
     </div>
     <div class="feat">
       <div class="feat-n">06</div>
+      <h3>YAML provenance</h3>
+      <p>Every wiki page carries a frontmatter block linking claims back to raw source files, GitHub PRs, or session timestamps. Hallucinations become traceable.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">07</div>
+      <h3>Semantic lint</h3>
+      <p>Detects contradictions between pages — not just broken links. Flags stale claims, orphan pages, missing source citations, and index mismatches.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">08</div>
       <h3>Token budgets</h3>
-      <p>Hard ceilings that Pith enforces — Claude won't exceed the limit without warning you first. Full cost control, no babysitting.</p>
+      <p>Hard ceilings enforced by Pith — Claude won't exceed the limit without warning. Set with <code style="font-family:var(--mono);font-size:11px">/budget 150</code>, clear with <code style="font-family:var(--mono);font-size:11px">/budget off</code>.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">09</div>
+      <h3>Ingest pipeline</h3>
+      <p>Feed any file to the wiki with <code style="font-family:var(--mono);font-size:11px">/pith ingest</code>. Pith extracts entities, concepts, and contradictions, shows a diff, and waits for your confirmation before writing anything.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">10</div>
+      <h3>Session persistence</h3>
+      <p>Mode, wiki state, and budget are saved on session exit — per project. Next session offers one-line restore. <code style="font-family:var(--mono);font-size:11px">/pith recall</code> restores mid-session. <code style="font-family:var(--mono);font-size:11px">/pith configure</code> walks through all settings interactively.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">11</div>
+      <h3>In-Claude install</h3>
+      <p>Install Pith without leaving Claude Code. <code style="font-family:var(--mono);font-size:11px">/pith install</code> locates the plugin, runs the installer, copies hooks, patches <code style="font-family:var(--mono);font-size:11px">settings.json</code>, registers slash commands, and verifies every step succeeded.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">12</div>
+      <h3>Clean uninstall</h3>
+      <p><code style="font-family:var(--mono);font-size:11px">/pith uninstall</code> removes hooks, slash commands, and all <code style="font-family:var(--mono);font-size:11px">settings.json</code> entries cleanly. Asks for confirmation first. Your project wikis and lifetime token history are preserved unless you explicitly request a full wipe.</p>
     </div>
   </div>
 </div>
 
 <hr class="hr" />
 
-<!-- COMMANDS -->
-<div class="s r" id="commands">
-  <div class="s-eye">Commands</div>
-  <h2 class="s-h">Type it.<br>Done.</h2>
-  <p class="s-p">Every command works inside any Claude Code session — no flags, no setup, no config files.</p>
+<!-- ━━━━━━━━━━━━━━━━━━━━ HOW IT INSTALLS ━━━━━━━━━━━━━━━━━━━━ -->
+<div class="s r">
+  <div class="s-eye">Installation</div>
+  <h2 class="s-h">One command.<br>Global, permanent.</h2>
+  <p class="s-p">Pith installs into <code style="font-family:var(--mono);font-size:14px;color:rgba(255,255,255,0.6)">~/.claude/hooks/</code>. Claude Code loads hooks globally — no per-project setup, no CLAUDE.md edits, no environment variables.</p>
 
-  <div class="cmd-grid">
-    <div class="cmd"><span class="cmd-k">/pith lean</span><span class="cmd-v">Drop articles, short synonyms, fragments OK — tightest default</span></div>
-    <div class="cmd"><span class="cmd-k">/pith precise</span><span class="cmd-v">Professional and tight — no filler, full sentences kept</span></div>
-    <div class="cmd"><span class="cmd-k">/pith ultra</span><span class="cmd-v">Maximum compression — arrows →, tables over prose, abbreviate freely</span></div>
-    <div class="cmd"><span class="cmd-k">/pith off</span><span class="cmd-v">Back to normal Claude output, no compression</span></div>
-    <div class="cmd"><span class="cmd-k">/pith debug</span><span class="cmd-v">Structured debug: hypothesis → test → result</span></div>
-    <div class="cmd"><span class="cmd-k">/pith review</span><span class="cmd-v">Code review: issues → suggestions → verdict</span></div>
-    <div class="cmd"><span class="cmd-k">/pith arch</span><span class="cmd-v">Architecture: context → decision → trade-offs</span></div>
-    <div class="cmd"><span class="cmd-k">/pith wiki "&lt;question&gt;"</span><span class="cmd-v">Search the project wiki</span></div>
-    <div class="cmd"><span class="cmd-k">/pith ingest &lt;file&gt;</span><span class="cmd-v">Add a source doc or spec to the wiki</span></div>
-    <div class="cmd"><span class="cmd-k">/pith status</span><span class="cmd-v">Token usage breakdown for this session</span></div>
-    <div class="cmd"><span class="cmd-k">/budget &lt;N&gt;</span><span class="cmd-v">Hard token ceiling — enforced, not suggested</span></div>
-    <div class="cmd"><span class="cmd-k">/pith commit</span><span class="cmd-v">Commit format: summary → changes → why</span></div>
+  <div class="install-steps">
+    <div class="is">
+      <div class="is-n">Step 01</div>
+      <h4>Run the installer</h4>
+      <p>One curl command clones Pith into <code style="font-family:var(--mono);font-size:11px">~/.claude/plugins/</code> and symlinks the hooks into <code style="font-family:var(--mono);font-size:11px">~/.claude/hooks/</code>. Or clone the repo and run <code style="font-family:var(--mono);font-size:11px">bash install.sh</code> directly.</p>
+    </div>
+    <div class="is">
+      <div class="is-n">Step 02</div>
+      <h4>Reload Claude Code</h4>
+      <p>Restart your Claude Code session. Pith hooks load automatically. No <code style="font-family:var(--mono);font-size:11px">/enable</code> command, no activation step.</p>
+    </div>
+    <div class="is">
+      <div class="is-n">Step 03</div>
+      <h4>It's running</h4>
+      <p>Every tool call is now intercepted and compressed. Run <code style="font-family:var(--mono);font-size:11px">/pith status</code> to confirm. LEAN mode is active by default.</p>
+    </div>
+    <div class="is">
+      <div class="is-n">In Claude</div>
+      <h4>Install without leaving Claude</h4>
+      <p>Already in a session? Run <code style="font-family:var(--mono);font-size:11px">/pith install</code> — Pith finds itself, runs the installer, verifies every step, and confirms. To remove: <code style="font-family:var(--mono);font-size:11px">/pith uninstall</code>.</p>
+    </div>
   </div>
 </div>
 
-<!-- CTA -->
+<hr class="hr" />
+
+<!-- ━━━━━━━━━━━━━━━━━━━━ SESSION PERSISTENCE ━━━━━━━━━━━━━━━━━━━━ -->
+<div class="s r" id="session">
+  <div class="s-eye green">Session Persistence</div>
+  <h2 class="s-h">Pick up exactly<br>where you left off.</h2>
+  <p class="s-p">Every time a session ends, Pith saves your mode, wiki state, and token budget. The next session opens with a single non-blocking offer to restore — one line, before your first message.</p>
+
+  <div class="term r">
+    <div class="term-chrome">
+      <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+      <span class="term-name">session start</span>
+    </div>
+    <div class="term-body">
+      <div><span class="t-dim">── New session ─────────────────────────────────────</span></div>
+      <div><span class="t-violet">◆ Pith</span> <span class="t-out">Last session: mode=<span class="t-emerald">ULTRA</span>, wiki=<span class="t-emerald">ON</span>, budget=<span class="t-hl">150</span> — restore? <span class="t-dim">(yes/no)</span></span></div>
+      <br>
+      <div><span class="t-dim">── Mid-session restore ─────────────────────────────</span></div>
+      <div><span class="t-prompt">$</span> <span class="t-cmd">/pith recall</span></div>
+      <div><span class="t-ok">✓</span> <span class="t-out">Restored: mode=<span class="t-emerald">ULTRA</span>, wiki=<span class="t-emerald">ON</span>, budget=<span class="t-hl">150</span></span></div>
+      <br>
+      <div><span class="t-dim">── Config wizard ───────────────────────────────────</span></div>
+      <div><span class="t-prompt">$</span> <span class="t-cmd">/pith configure</span></div>
+      <div><span class="t-violet">◆</span> <span class="t-out">Current: mode=<span class="t-emerald">LEAN</span>, wiki=<span class="t-dim">OFF</span>, budget=<span class="t-dim">none</span>, auto-compact=<span class="t-emerald">ON</span></span></div>
+      <div><span class="t-violet">◆</span> <span class="t-out">Output mode? <span class="t-dim">[lean / precise / ultra / off]</span></span></div>
+      <div><span class="t-prompt">&gt;</span> <span class="t-cmd">ultra</span></div>
+      <div><span class="t-ok">✓</span> <span class="t-out">Mode → <span class="t-emerald">ULTRA</span></span></div>
+      <div><span class="t-violet">◆</span> <span class="t-out">Enable wiki mode? <span class="t-dim">[yes / no]</span></span></div>
+      <div><span class="t-prompt">&gt;</span> <span class="t-cmd">yes</span></div>
+      <div><span class="t-ok">✓</span> <span class="t-out">Wiki → <span class="t-emerald">ON</span></span></div>
+      <div><span class="t-violet">◆</span> <span class="t-out">Token budget? <span class="t-dim">[number or skip]</span></span></div>
+      <div><span class="t-prompt">&gt;</span> <span class="t-cmd">200</span></div>
+      <div><span class="t-ok">✓</span> <span class="t-out">Budget → <span class="t-hl">200</span></span></div>
+      <div><span class="t-violet">◆</span> <span class="t-out">Auto-compact at 70%? <span class="t-dim">[yes / no]</span></span></div>
+      <div><span class="t-prompt">&gt;</span> <span class="t-cmd">yes</span></div>
+      <div><span class="t-ok">✓</span> <span class="t-out">Auto-compact → <span class="t-emerald">ON</span></span></div>
+      <div><span class="t-ok">◆</span> <span class="t-out">Done — ULTRA · wiki=ON · budget=200 · auto-compact=ON</span></div>
+    </div>
+  </div>
+
+  <div class="feat-grid r" style="margin-top:2px">
+    <div class="feat">
+      <div class="feat-n">Automatic</div>
+      <h3>Session end saves state</h3>
+      <p>When a session closes, Pith writes the current mode, wiki state, and budget to a local state file. Nothing to configure — it happens on every session exit.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">Non-blocking</div>
+      <h3>One-line restore offer</h3>
+      <p>On the first message of a new session, Pith offers to restore — a single line before your question. Say yes, no, or just ignore it and keep working. It never delays you.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">/pith recall</div>
+      <h3>Restore mid-session</h3>
+      <p>Forgot to restore at session start? <code style="font-family:var(--mono);font-size:11px">/pith recall</code> reads the saved state at any point and re-applies mode, wiki, and budget — confirmed in one line.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">/pith configure</div>
+      <h3>Full config wizard</h3>
+      <p>Shows current settings upfront. Walks through mode → wiki → budget → auto-compact, one question at a time. Each setting applies as you answer. Ends with a one-line summary.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">Isolated</div>
+      <h3>Per-project state</h3>
+      <p>State is saved per working directory. Your auth-service session restores ULTRA + budget=150. Your docs project restores PRECISE + no budget. They never cross.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">Visible</div>
+      <h3>Always inspectable</h3>
+      <p>The saved state file is plain JSON in your project root — human-readable, editable, committable to git if you want the whole team to share defaults.</p>
+    </div>
+  </div>
+</div>
+
+<hr class="hr" />
+
+<!-- ━━━━━━━━━━━━━━━━━━━━ ALL COMMANDS ━━━━━━━━━━━━━━━━━━━━ -->
+<div class="s r" id="commands">
+  <div class="s-eye">Commands</div>
+  <h2 class="s-h">Everything in one place.</h2>
+  <p class="s-p">Every command works inside any Claude Code session. Type it and go — no flags, no config files, no setup.</p>
+
+  <div class="cmd-section">
+
+    <div class="cmd-grid">
+      <div class="cmd-group-label">Compression modes</div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith lean</span></span><span class="cmd-v">Default mode — drop articles, short synonyms, fragments OK</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith precise</span></span><span class="cmd-v">Professional and tight — no filler, full sentences kept</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith ultra</span></span><span class="cmd-v">Maximum compression — arrows →, tables over prose, abbreviate freely</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith off</span></span><span class="cmd-v">Back to standard Claude output, no compression applied</span></div>
+    </div>
+
+    <div class="cmd-grid" style="margin-top:2px">
+      <div class="cmd-group-label">Session control</div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith status</span></span><span class="cmd-v">Token usage, cost breakdown, mode, budget, and savings for this session</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/budget &lt;N&gt;</span></span><span class="cmd-v">Set a hard token ceiling — enforced, not suggested</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/budget off</span></span><span class="cmd-v">Clear the token budget ceiling</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith recall</span></span><span class="cmd-v">Restore last session's mode, wiki, and budget mid-session — one line confirm</span><span class="cmd-new">New</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith configure</span></span><span class="cmd-v">Interactive config wizard — mode → wiki → budget → auto-compact, one question at a time</span><span class="cmd-new">New</span></div>
+    </div>
+
+    <div class="cmd-grid" style="margin-top:2px">
+      <div class="cmd-group-label">Structured output formats (one-shot, do not persist)</div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith debug</span></span><span class="cmd-v">Problem / Cause / Fix / Verify — 4 fields, no prose</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith review</span></span><span class="cmd-v">Code review — one line per issue, no summaries</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith arch</span></span><span class="cmd-v">Architecture decision — Options table / Choice / Risks / Next</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith plan</span></span><span class="cmd-v">Implementation plan — Goal / Steps / Risks / Done-when</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith commit</span></span><span class="cmd-v">Commit message — Conventional Commits, subject ≤50 chars</span></div>
+    </div>
+
+    <div class="cmd-grid" style="margin-top:2px">
+      <div class="cmd-group-label">Wiki system</div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith wiki "&lt;question&gt;"</span></span><span class="cmd-v">Query the wiki — synthesises answer with page citations</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith ingest &lt;file&gt;</span></span><span class="cmd-v">Parse a file into wiki pages — shows diff, waits for confirmation</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith lint</span></span><span class="cmd-v">Semantic contradiction detection, orphan pages, stale claims, broken index</span></div>
+    </div>
+
+    <div class="cmd-grid" style="margin-top:2px">
+      <div class="cmd-group-label">Graph &amp; visualisation</div>
+      <div class="cmd">
+        <span class="cmd-k"><span class="hl">/pith-graph</span></span>
+        <span class="cmd-v">Generate wiki-graph.html — force-directed D3 network, opens in browser</span>
+        <span class="cmd-new">New</span>
+      </div>
+    </div>
+
+    <div class="cmd-grid" style="margin-top:2px">
+      <div class="cmd-group-label">Onboarding &amp; help</div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith tour</span></span><span class="cmd-v">Interactive guided tour of every Pith feature — resumable, skippable</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith setup</span></span><span class="cmd-v">Run first-session wiki onboarding in any project</span></div>
+    </div>
+
+    <div class="cmd-grid" style="margin-top:2px">
+      <div class="cmd-group-label">Install &amp; uninstall</div>
+      <div class="cmd">
+        <span class="cmd-k"><span class="hl">/pith install</span></span>
+        <span class="cmd-v">Install Pith into Claude Code — copies hooks, patches settings.json, registers slash commands</span>
+        <span class="cmd-new">New</span>
+      </div>
+      <div class="cmd">
+        <span class="cmd-k"><span class="hl">/pith uninstall</span></span>
+        <span class="cmd-v">Remove Pith cleanly — hooks, commands, and settings.json entries. Preserves wiki and token history.</span>
+        <span class="cmd-new">New</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━ CTA ━━━━━━━━━━━━━━━━━━━━ -->
 <div class="cta r">
   <div class="cta-light"></div>
   <h2>Install once.<br>Save forever.</h2>
@@ -831,7 +1248,7 @@
   </div>
 </div>
 
-<!-- FOOTER -->
+<!-- ━━━━━━━━━━━━━━━━━━━━ FOOTER ━━━━━━━━━━━━━━━━━━━━ -->
 <footer>
   <span>Pith — token optimization for Claude Code</span>
   <div class="fl">
@@ -841,25 +1258,26 @@
   </div>
 </footer>
 
+<!-- ━━━━━━━━━━━━━━━━━━━━ D3 DEMO GRAPH ━━━━━━━━━━━━━━━━━━━━ -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
-  // Copy
+  // ── Copy button ──────────────────────────────────────────────────────────────
   function cp(btn) {
     navigator.clipboard.writeText('bash <(curl -s https://raw.githubusercontent.com/abhisekjha/pith/main/install.sh)').then(() => {
       const o = btn.textContent;
-      btn.textContent = 'Copied';
-      btn.style.color = 'var(--green)';
+      btn.textContent = 'Copied'; btn.style.color = 'var(--green)';
       setTimeout(() => { btn.textContent = o; btn.style.color = ''; }, 2000);
     });
   }
 
-  // Scroll reveal
+  // ── Scroll reveal ─────────────────────────────────────────────────────────────
   const io = new IntersectionObserver(
-    es => es.forEach(e => { if(e.isIntersecting) { e.target.classList.add('on'); io.unobserve(e.target); } }),
+    es => es.forEach(e => { if(e.isIntersecting){ e.target.classList.add('on'); io.unobserve(e.target); } }),
     { threshold: 0.06, rootMargin: '0px 0px -40px 0px' }
   );
   document.querySelectorAll('.r:not(.on)').forEach(el => io.observe(el));
 
-  // Counter animation
+  // ── Counter animation ─────────────────────────────────────────────────────────
   function animCount(el, end, suffix, dur) {
     let start = null;
     const step = ts => {
@@ -871,17 +1289,151 @@
     };
     requestAnimationFrame(step);
   }
-
   const statsEl = document.querySelector('.stats');
-  const c1 = document.getElementById('c1');
   let counted = false;
   const sio = new IntersectionObserver(es => {
     if (es[0].isIntersecting && !counted) {
       counted = true;
-      animCount(c1, 88, '%', 1400);
+      animCount(document.getElementById('c1'), 88, '%', 1400);
+      animCount(document.getElementById('c4'), 4, '', 1000);
     }
   }, { threshold: 0.4 });
   sio.observe(statsEl);
+
+  // ── Demo graph ────────────────────────────────────────────────────────────────
+  const DEMO_NODES = [
+    { id:'ui-stack',       label:'ui-stack',       group:'decisions' },
+    { id:'mac-mini',       label:'mac-mini-llm',   group:'decisions' },
+    { id:'agentic',        label:'Agentic-Workflows', group:'concepts' },
+    { id:'autonomous',     label:'Autonomous-AI',  group:'concepts' },
+    { id:'pith-graph',     label:'Pith-Wiki-Graph',group:'concepts' },
+    { id:'nextjs',         label:'Next.js',        group:'entities'  },
+    { id:'shadcn',         label:'shadcn/ui',      group:'entities'  },
+    { id:'tailwind',       label:'Tailwind-CSS',   group:'entities'  },
+    { id:'provenance',     label:'Provenance',     group:'concepts'  },
+    { id:'lint',           label:'Semantic-Lint',  group:'syntheses' },
+  ];
+  const DEMO_EDGES = [
+    {source:'ui-stack',   target:'nextjs'},
+    {source:'ui-stack',   target:'shadcn'},
+    {source:'ui-stack',   target:'tailwind'},
+    {source:'ui-stack',   target:'agentic'},
+    {source:'ui-stack',   target:'pith-graph'},
+    {source:'agentic',    target:'autonomous'},
+    {source:'agentic',    target:'pith-graph'},
+    {source:'mac-mini',   target:'agentic'},
+    {source:'mac-mini',   target:'autonomous'},
+    {source:'shadcn',     target:'nextjs'},
+    {source:'shadcn',     target:'tailwind'},
+    {source:'pith-graph', target:'provenance'},
+    {source:'lint',       target:'provenance'},
+    {source:'lint',       target:'agentic'},
+  ];
+
+  const GROUP_COLORS = {
+    decisions:'#34d399', concepts:'#818cf8',
+    entities:'#fb923c',  syntheses:'#f472b6',
+  };
+  const GROUP_GLOW = {
+    decisions:'drop-shadow(0 0 5px rgba(52,211,153,0.6))',
+    concepts: 'drop-shadow(0 0 5px rgba(129,140,248,0.6))',
+    entities: 'drop-shadow(0 0 5px rgba(251,146,60,0.6))',
+    syntheses:'drop-shadow(0 0 5px rgba(244,114,182,0.6))',
+  };
+  function nc(d){ return GROUP_COLORS[d.group]||'#818cf8'; }
+
+  const container = document.getElementById('graph-canvas');
+  const svg = d3.select('#graph-canvas');
+
+  const nb = {}; DEMO_NODES.forEach(n=>{ nb[n.id]=new Set(); });
+  DEMO_EDGES.forEach(e=>{ nb[e.source].add(e.target); nb[e.target].add(e.source); });
+
+  document.getElementById('graph-stats').textContent =
+    `${DEMO_NODES.length} pages · ${DEMO_EDGES.length} links`;
+
+  function buildGraph() {
+    svg.selectAll('*').remove();
+    const W = container.getBoundingClientRect().width;
+    const H = container.getBoundingClientRect().height || 420;
+    const g = svg.append('g');
+
+    const zoom = d3.zoom().scaleExtent([0.3,4])
+      .on('zoom', e => g.attr('transform', e.transform));
+    svg.call(zoom);
+    svg.call(zoom.transform, d3.zoomIdentity.translate(W/2, H/2).scale(0.9));
+
+    const nodes = DEMO_NODES.map(n=>({...n}));
+    const edges = DEMO_EDGES.map(e=>({...e}));
+
+    const sim = d3.forceSimulation(nodes)
+      .force('link',   d3.forceLink(edges).id(d=>d.id).distance(80).strength(0.4))
+      .force('charge', d3.forceManyBody().strength(-200))
+      .force('center', d3.forceCenter(0,0))
+      .force('collide',d3.forceCollide(26));
+
+    const link = g.append('g').selectAll('line').data(edges).join('line')
+      .attr('stroke', d => { const sn = nodes.find(n=>n.id===d.source||n.id===d.source?.id); return sn?nc(sn):'#27272a'; })
+      .attr('stroke-opacity', 0.22).attr('stroke-width', 1.4);
+
+    const nodeG = g.append('g').selectAll('g').data(nodes).join('g')
+      .style('cursor','grab')
+      .call(d3.drag()
+        .on('start',(ev,d)=>{ if(!ev.active)sim.alphaTarget(0.3).restart(); d.fx=d.x;d.fy=d.y; })
+        .on('drag', (ev,d)=>{ d.fx=ev.x;d.fy=ev.y; })
+        .on('end',  (ev,d)=>{ if(!ev.active)sim.alphaTarget(0); d.fx=null;d.fy=null; }));
+
+    nodeG.append('circle')
+      .attr('r', 9).attr('fill', d=>nc(d)).attr('fill-opacity', 0.2)
+      .attr('stroke', nc).attr('stroke-width', 1.5)
+      .attr('filter', d=>GROUP_GLOW[d.group]||'none');
+
+    nodeG.append('rect').attr('class','pill').attr('rx',3).attr('ry',3)
+      .attr('fill','rgba(5,5,5,0.82)').attr('opacity',0);
+
+    nodeG.append('text').text(d=>d.label)
+      .attr('x',13).attr('y',0).attr('font-size',9.5)
+      .attr('font-family','SF Mono,ui-monospace,monospace')
+      .attr('dominant-baseline','central')
+      .attr('fill','rgba(255,255,255,0.6)').attr('pointer-events','none');
+
+    nodeG.on('mouseover',(ev,d)=>{
+      const nbs = nb[d.id]||new Set();
+      nodeG.selectAll('circle').attr('opacity', n => n.id===d.id||nbs.has(n.id)?1:0.07);
+      nodeG.selectAll('.pill').attr('opacity', n => n.id===d.id||nbs.has(n.id)?1:0.07);
+      nodeG.selectAll('text').attr('opacity', n => n.id===d.id||nbs.has(n.id)?1:0.07);
+      link.attr('stroke-opacity', e => {
+        const s=e.source?.id||e.source, t=e.target?.id||e.target;
+        return s===d.id||t===d.id ? 0.9 : 0.04;
+      }).attr('stroke-width', e => {
+        const s=e.source?.id||e.source, t=e.target?.id||e.target;
+        return s===d.id||t===d.id ? 2 : 1.4;
+      });
+    }).on('mouseout',()=>{
+      nodeG.selectAll('circle').attr('opacity',1);
+      nodeG.selectAll('.pill').attr('opacity',null);
+      nodeG.selectAll('text').attr('opacity',1);
+      link.attr('stroke-opacity',0.22).attr('stroke-width',1.4);
+    });
+
+    sim.on('tick',()=>{
+      link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+          .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+      nodeG.attr('transform',d=>`translate(${d.x},${d.y})`);
+      nodeG.each(function(){
+        const t=d3.select(this).select('text').node();
+        const r=d3.select(this).select('.pill');
+        if(!t) return;
+        try { const bb=t.getBBox(); r.attr('x',bb.x-4).attr('y',bb.y-2).attr('width',bb.width+8).attr('height',bb.height+4).attr('opacity',1); } catch(e){}
+      });
+    });
+  }
+
+  // Build after section enters viewport
+  const graphIo = new IntersectionObserver(es=>{
+    if(es[0].isIntersecting){ buildGraph(); graphIo.disconnect(); }
+  },{ threshold:0.1 });
+  graphIo.observe(document.getElementById('graph-canvas'));
+  window.addEventListener('resize',()=>{ if(document.getElementById('graph-canvas').querySelector('g')) buildGraph(); });
 </script>
 </body>
 </html>

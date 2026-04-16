@@ -39,15 +39,21 @@ try:
 except: print('0')
 " 2>/dev/null || echo '0')
 
-TOKENS=$(python3 -c "
+STATS=$(python3 -c "
 import json, sys
 try:
   d = json.load(open('$STATE'))
   proj = d.get('$PROJ_KEY', {})
-  t = proj.get('input_tokens_est', 0)
-  print(t)
-except: print(0)
-" 2>/dev/null || echo '0')
+  t     = proj.get('input_tokens_est', 0)
+  saved = proj.get('tool_savings_session', 0)
+  total = t + saved
+  pct   = round(saved / total * 100) if total > 0 else 0
+  print(t, pct)
+except: print(0, 0)
+" 2>/dev/null || echo '0 0')
+
+TOKENS=$(echo "$STATS" | awk '{print $1}')
+PCT=$(echo "$STATS" | awk '{print $2}')
 
 # Format token count
 if [ "${TOKENS:-0}" -ge 1000 ] 2>/dev/null; then
@@ -65,4 +71,9 @@ else
   SUFFIX=""
 fi
 
-echo "PITH${SUFFIX} ${TOKENS_FMT}/200k"
+# Show compression ratio if nonzero
+if [ "${PCT:-0}" -gt 0 ] 2>/dev/null; then
+  echo "PITH${SUFFIX} ↓${PCT}% ${TOKENS_FMT}/200k"
+else
+  echo "PITH${SUFFIX} ${TOKENS_FMT}/200k"
+fi
