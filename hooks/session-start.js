@@ -74,6 +74,21 @@ if (config.tool_compress) features.push('tool compression');
 if (config.auto_compact)  features.push(`auto-compact at ${Math.round(config.auto_compact_threshold * 100)}%`);
 if (features.length) output.push(`PITH ACTIVE: ${features.join(', ')}.`);
 
+// ── 2a. USTYNOV PRINCIPLE (injected once per project) ────────────────────────
+// Ustynov [2026] arXiv:2604.07502 — abbreviations save 17% input tokens but
+// cause re-reads that increase total session cost by 67%.
+if (!proj.ustynov_injected) {
+  output.push(
+    'NAMING CONVENTION — Ustynov Principle (2026):\n' +
+    'Use descriptive names in all generated code.\n' +
+    '  ✓  calculateUserSessionTotal   →  intent clear, one-shot\n' +
+    '  ✗  calcSessTotal               →  ambiguous, causes re-reads (+67% cost)\n' +
+    'This applies to functions, variables, and file names you create or rename.'
+  );
+  const { saveProjectState: _sps } = require('./config');
+  _sps({ ustynov_injected: true });
+}
+
 // ── 3. OUTPUT MODE RULES ─────────────────────────────────────────────────────
 const mode = proj.mode || config.default_mode;
 if (mode && mode !== 'off') {

@@ -167,6 +167,8 @@ process.stdin.on('end', () => {
   /pith budget <n>       Set hard token limit for responses
   /pith budget off       Clear token budget
   /pith focus <file>     Focus context on a specific file
+  /pith symbol <f> <n>   Extract exact lines for a symbol (~95% token saving)
+  /pith symbol --list <f> List all symbols in a file
 
 ── Session & Config ────────────────────────────────────────────
   /pith status           Token usage health report
@@ -211,6 +213,21 @@ Display this reference any time with: /pith help`
           out.push('[PITH: /pith focus requires a file path. Example: /pith focus src/main.js]');
         } else {
           out.push(runTool('focus.py', [rest, '--question', data.prompt || ''], root));
+        }
+
+      } else if (arg === 'symbol' || arg === 'sym') {
+        // /pith symbol <file> <name>   — extract exact lines for one symbol
+        // /pith symbol --list <file>   — list all symbols in a file
+        const subParts = rest.trim().split(/\s+/);
+        if (rest.startsWith('--list') || rest.startsWith('-l')) {
+          const file = subParts[1] || subParts[0];
+          out.push(file ? runTool('symbols.py', [file, '--list'], root)
+                        : '[PITH: /pith symbol --list <file>]');
+        } else if (subParts.length >= 2) {
+          const [file, ...nameParts] = subParts;
+          out.push(runTool('symbols.py', [file, nameParts.join(' ')], root));
+        } else {
+          out.push('[PITH: /pith symbol <file> <symbol_name>  or  /pith symbol --list <file>]');
         }
 
       } else if (arg === 'grepai') {
