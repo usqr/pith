@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
 set -e
 
+# ── Self-clone when piped via curl ────────────────────────────────────────────
+# bash <(curl -s ...) sets BASH_SOURCE[0] to /dev/fd/<n> — there are no
+# hook files there.  Detect this and clone to a stable location, then re-exec.
+_src="${BASH_SOURCE[0]}"
+if [[ "$_src" == /dev/fd/* ]] || [[ "$_src" == /proc/*/fd/* ]] || [[ "$_src" == "" ]]; then
+  INSTALL_SRC="${HOME}/.local/share/pith"
+  echo ""
+  echo "Detected curl-pipe install — cloning repo to ${INSTALL_SRC}..."
+  mkdir -p "$(dirname "${INSTALL_SRC}")"
+  if [ -d "${INSTALL_SRC}/.git" ]; then
+    git -C "${INSTALL_SRC}" pull --quiet --ff-only
+  else
+    git clone --depth=1 --quiet https://github.com/abhisekjha/pith.git "${INSTALL_SRC}"
+  fi
+  exec bash "${INSTALL_SRC}/install.sh"
+fi
+
 PLUGIN_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_DIR="${HOME}/.claude"
 HOOKS_DIR="${CLAUDE_DIR}/hooks/pith"
