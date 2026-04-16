@@ -15,11 +15,11 @@ if [ -d "${HOOKS_DIR}" ]; then
 fi
 
 # Remove slash commands
-for cmd in pith budget focus; do
+for cmd in pith budget focus pith-graph; do
   f="${CLAUDE_DIR}/commands/${cmd}.md"
   if [ -f "${f}" ]; then
     rm "${f}"
-    echo "  ✓ /pith ${cmd} command removed"
+    echo "  ✓ /${cmd} command removed"
   fi
 done
 

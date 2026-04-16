@@ -136,10 +136,28 @@ python3 "${root}/tools/focus.py" "$ARGUMENTS"
 Show the relevant sections to the user. If no sections match, show the file structure overview.
 `;
 
-fs.writeFileSync(path.join(cmds, 'pith.md'),   pithMd);
-fs.writeFileSync(path.join(cmds, 'budget.md'), budgetMd);
-fs.writeFileSync(path.join(cmds, 'focus.md'),  focusMd);
-console.log('  ✓ slash commands registered (/pith, /budget, /focus)');
+const graphMd = `---
+allowed-tools: Bash
+---
+Run the Pith wiki graph generator for the current project.
+
+\`\`\`bash
+python3 "${root}/tools/graph_generator.py"
+\`\`\`
+
+The script will:
+1. Scan \`./wiki/\` for \`.md\` files and extract \`[[wikilinks]]\`
+2. Write \`wiki-graph.html\` to the current project root
+3. Automatically open it in the default browser
+
+If \`wiki/\` does not exist or has no \`.md\` files, tell the user to build the wiki first with \`/pith wiki\`.
+`;
+
+fs.writeFileSync(path.join(cmds, 'pith.md'),       pithMd);
+fs.writeFileSync(path.join(cmds, 'budget.md'),     budgetMd);
+fs.writeFileSync(path.join(cmds, 'focus.md'),      focusMd);
+fs.writeFileSync(path.join(cmds, 'pith-graph.md'), graphMd);
+console.log('  ✓ slash commands registered (/pith, /budget, /focus, /pith-graph)');
 CMDSCRIPT
 
 # Write CLAUDE_PLUGIN_ROOT to config so hooks can find skills/tools
