@@ -97,6 +97,10 @@ process.stdin.on('end', () => {
         updates.skeleton_savings_session = (proj.skeleton_savings_session || 0) + savedTokens;
       } else if (comprFormat === 'bash') {
         updates.bash_savings_session = (proj.bash_savings_session || 0) + savedTokens;
+      } else if (comprFormat === 'grep') {
+        updates.grep_savings_session = (proj.grep_savings_session || 0) + savedTokens;
+      } else if (comprFormat === 'web') {
+        updates.web_savings_session  = (proj.web_savings_session  || 0) + savedTokens;
       }
       // ── Offload large results to file ────────────────────────────────────
       // If still >offload_threshold tokens after compression, write to

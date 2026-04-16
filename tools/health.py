@@ -72,15 +72,24 @@ def fmt_cost(c: float) -> str:
     return f'${c:.4f}'
 
 
+def pct_bar(n: int, total: int, w: int = 12) -> str:
+    """Tiny inline bar showing n's share of total."""
+    if total <= 0 or n <= 0:
+        return ' ' * w
+    filled = min(round(n / total * w), w)
+    return f'{DIM}{"▪" * filled}{"·" * (w - filled)}{RESET}'
+
+
 def main():
     s = load()
-    inp     = s.get('input_tokens_est', 0)
-    out_tok = s.get('output_tokens_est', 0)
+    inp       = s.get('input_tokens_est', 0)
+    out_tok   = s.get('output_tokens_est', 0)
     t_saved   = s.get('tokens_saved_session', 0)
-    tool_s    = s.get('tool_savings_session', 0)
     toon_s    = s.get('toon_savings_session', 0)
     skel_s    = s.get('skeleton_savings_session', 0)
     bash_s    = s.get('bash_savings_session', 0)
+    grep_s    = s.get('grep_savings_session', 0)
+    web_s     = s.get('web_savings_session', 0)
     offload_s = s.get('offload_savings_session', 0)
     out_s     = s.get('output_savings_session', 0)
     offload_t = s.get('offload_savings_total', 0)
@@ -94,25 +103,23 @@ def main():
     total_cost_saved = s.get('cost_saved_total', 0.0)
 
     fill    = inp / limit if limit else 0
-    w_total = inp + t_saved
-    pct     = round(t_saved / w_total * 100) if w_total else 0
+    # Total without Pith = what we consumed + what Pith removed
     without = inp + t_saved
+    pct     = round(t_saved / without * 100) if without else 0
 
     # Cost calculations
     actual_in_cost  = cost(inp,     IN_COST_PER_M)
     actual_out_cost = cost(out_tok, OUT_COST_PER_M)
     actual_cost     = actual_in_cost + actual_out_cost
-    saved_cost      = cost(t_saved, IN_COST_PER_M)   # savings are mostly input tokens
-    would_cost      = actual_cost + saved_cost
+    # Savings cost = input tokens we avoided (most savings are input tokens re-read each turn)
+    saved_cost_val  = cost(t_saved, IN_COST_PER_M)
+    would_cost      = actual_cost + saved_cost_val
 
-    # Threshold color for context percentage
+    # Threshold color for context bar
     pct_fill = round(fill * 100)
-    if fill > 0.85:
-        pct_color = RED
-    elif fill > 0.70:
-        pct_color = YELLOW
-    else:
-        pct_color = ''
+    if fill > 0.85:   pct_color = RED
+    elif fill > 0.70: pct_color = YELLOW
+    else:             pct_color = ''
 
     budget_str = f'\u2264{budget} tok/resp' if budget else 'none'
     pct_str    = f'{pct_color}{pct_fill}%{RESET}' if pct_color else f'{pct_fill}%'
@@ -126,40 +133,65 @@ def main():
     print(f'  {DIM}{"Mode":<16}{RESET}{mode.upper()}')
     print(f'  {DIM}{"Budget":<16}{RESET}{budget_str}')
     print(f'  {DIM}{"Model":<16}{RESET}{model_str}')
+
+    # ── Savings breakdown ─────────────────────────────────────────────────────
+    # Each bucket gets a mini bar showing its share of total saved tokens.
+    # This makes the breakdown legible and lets you see what's doing the most work.
     print()
-    print(f'  {DIM}Tokens saved (this session){RESET}')
-    if toon_s:
-        toon_pct = round(toon_s / t_saved * 100) if t_saved else 0
-        print(row('TOON (JSON)',   f'{fmt(toon_s)}  {DIM}{toon_pct}%{RESET}', ''))
-    if skel_s:
-        print(row('Skeletons',     fmt(skel_s)))
-    if bash_s:
-        print(row('Bash/build',    fmt(bash_s)))
-    if offload_s:
-        print(row('Offloaded',     fmt(offload_s), ''))
-    if out_s:
-        print(row('Style output',  fmt(out_s)))
-    if compact:
-        print(row('Auto-compacts', f'{compact}×'))
-    if esc_s:
-        print(row('Auto-escalations', f'{esc_s}×'))
-    print(row('Total saved',   f'~{fmt(t_saved)} ({pct}%)', GREEN + BOLD))
-    print(row('Without Pith', fmt(without)))
+    print(f'  {DIM}Savings this session  (without Pith: {fmt(without)} tokens){RESET}')
+    print()
+
+    buckets = [
+        ('Skeletons',      skel_s,    'file reads → imports + signatures'),
+        ('Bash/build',     bash_s,    'build, install, test output'),
+        ('Grep/search',    grep_s,    'search results capped at 25'),
+        ('TOON (JSON)',    toon_s,    'JSON → compact key=value format'),
+        ('Web fetch',      web_s,     'HTML stripped to text'),
+        ('Offloaded',      offload_s, 'large results moved to file'),
+        ('Output mode',    out_s,     f'lean/ultra response compression  {DIM}(est){RESET}'),
+    ]
+    any_bucket = any(v > 0 for _, v, _ in buckets)
+    if any_bucket:
+        for label, val, desc in buckets:
+            if val <= 0:
+                continue
+            share_pct = round(val / t_saved * 100) if t_saved else 0
+            mini      = pct_bar(val, t_saved)
+            print(f'  {DIM}{label:<16}{RESET}{mini} {fmt(val):>6}  {DIM}{share_pct}%  {desc}{RESET}')
+        print()
+
+    # Summary line
+    if t_saved > 0:
+        print(f'  {GREEN}{BOLD}{"Total saved":<16}{RESET}  '
+              f'{GREEN}{BOLD}{fmt(t_saved)} tokens  ({pct}% of what this session would have used){RESET}')
+        print(f'  {DIM}{"Actual used":<16}{RESET}  {fmt(inp)} tokens  '
+              f'{DIM}({100 - pct}% of uncompressed baseline){RESET}')
+    else:
+        print(f'  {DIM}No savings recorded yet — tool compression fires on first tool call.{RESET}')
+
+    if compact:  print(f'\n  {DIM}Auto-compacts:  {compact}×{RESET}')
+    if esc_s:    print(f'  {DIM}Auto-escalations: {esc_s}×{RESET}')
+
+    # ── Cost ─────────────────────────────────────────────────────────────────
     print()
     print(f'  {DIM}Cost (this session){RESET}')
     print(row('Tokens in',    f'{fmt(inp)} → {fmt_cost(actual_in_cost)}'))
     print(row('Tokens out',   f'{fmt(out_tok)} → {fmt_cost(actual_out_cost)}'))
     print(row('Actual spend', fmt_cost(actual_cost), YELLOW))
-    print(row('Cost saved',   fmt_cost(saved_cost),  GREEN + BOLD))
+    print(row('Cost saved',   fmt_cost(saved_cost_val),  GREEN + BOLD))
     print(row('Without Pith', fmt_cost(would_cost),  RED))
+
+    # ── Lifetime ──────────────────────────────────────────────────────────────
+    lifetime_total = total + t_saved
+    lifetime_cost  = total_cost_saved + saved_cost_val
     print()
     print(f'  {DIM}Lifetime{RESET}')
-    print(row('Tokens saved', f'~{fmt(total + t_saved)}',              DIM))
+    print(row('Tokens saved', f'~{fmt(lifetime_total)}',  DIM))
     if toon_total + toon_s:
-        print(row('TOON saved',    f'~{fmt(toon_total + toon_s)}',     DIM))
+        print(row('TOON saved',  f'~{fmt(toon_total + toon_s)}', DIM))
     if offload_t + offload_s:
-        print(row('Offloaded',     f'~{fmt(offload_t + offload_s)}',   DIM))
-    print(row('Cost saved',   fmt_cost(total_cost_saved + saved_cost), DIM))
+        print(row('Offloaded',   f'~{fmt(offload_t + offload_s)}', DIM))
+    print(row('Cost saved',   fmt_cost(lifetime_cost), DIM))
     print()
 
 

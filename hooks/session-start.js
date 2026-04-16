@@ -25,6 +25,8 @@ saveProjectState({
   bash_savings_session:     0,
   offload_savings_session:  0,
   output_savings_session:   0,
+  grep_savings_session:     0,
+  web_savings_session:      0,
   compact_count_session:    0,
   escalation_count_session: 0,
   hindsight_nudged:         false,

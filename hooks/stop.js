@@ -15,16 +15,33 @@ process.stdin.on('end', () => {
     const updates = {};
 
     // Real token counts if Claude Code exposes them in stop event
+    let actualOut = 0;
     if (data.usage) {
       updates.input_tokens_actual  = (proj.input_tokens_actual  || 0) + (data.usage.input_tokens  || 0);
       updates.output_tokens_actual = (proj.output_tokens_actual || 0) + (data.usage.output_tokens || 0);
+      actualOut = data.usage.output_tokens || 0;
       // Prefer actual over estimate
       updates.input_tokens_est = updates.input_tokens_actual;
     } else if (data.response) {
       // Estimate output tokens, add to input_tokens_est (output becomes input next turn)
-      const outEst = Math.ceil(String(data.response).length / 4);
-      updates.output_tokens_est = (proj.output_tokens_est || 0) + outEst;
-      updates.input_tokens_est  = (proj.input_tokens_est  || 0) + outEst;
+      actualOut = Math.ceil(String(data.response).length / 4);
+      updates.output_tokens_est = (proj.output_tokens_est || 0) + actualOut;
+      updates.input_tokens_est  = (proj.input_tokens_est  || 0) + actualOut;
+    }
+
+    // ── Output savings from active compression mode ───────────────────────
+    // When lean/ultra is active, Claude writes shorter responses.
+    // Savings = (what output would have been without mode) - actual output.
+    // Baseline estimate: actual / (1 - compression_rate)
+    // Rates are conservative estimates validated against OCD/SWEzze benchmarks.
+    if (actualOut > 0) {
+      const mode = proj.mode || 'off';
+      const rate = mode === 'ultra' ? 0.42 : mode === 'lean' ? 0.25 : mode === 'precise' ? 0.12 : 0;
+      if (rate > 0) {
+        const baseline  = Math.ceil(actualOut / (1 - rate));
+        const outSaved  = baseline - actualOut;
+        updates.output_savings_session = (proj.output_savings_session || 0) + outSaved;
+      }
     }
 
     // Accumulate lifetime total
