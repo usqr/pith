@@ -80,6 +80,44 @@ def pct_bar(n: int, total: int, w: int = 12) -> str:
     return f'{DIM}{"▪" * filled}{"·" * (w - filled)}{RESET}'
 
 
+def flow_chart(inp: int, out_tok: int, t_saved: int, without: int, limit: int) -> str:
+    """ASCII token flow diagram — baseline vs actual vs output."""
+    W = 32   # bar width in chars
+    lines = []
+
+    def flow_bar(n: int, total: int, color: str) -> str:
+        filled = min(round(n / total * W), W) if total > 0 else 0
+        return f'{color}{"█" * filled}{"░" * (W - filled)}{RESET}'
+
+    if without > 0:
+        lines.append(f'  {DIM}Token Flow{RESET}')
+        lines.append(f'  {DIM}{"─" * 54}{RESET}')
+        lines.append(
+            f'  {DIM}{"Baseline (no Pith)":<20}{RESET}'
+            f'{flow_bar(without, without, DIM)}  {fmt(without)}'
+        )
+        lines.append(
+            f'  {DIM}{"Pith compressed":<20}{RESET}'
+            f'{flow_bar(inp, without, PURPLE)}  {fmt(inp)}'
+            f'  {DIM}({round(inp/without*100) if without else 0}% of baseline){RESET}'
+        )
+        if t_saved > 0:
+            lines.append(
+                f'  {GREEN}{"  └ saved":<20}{RESET}'
+                f'{flow_bar(t_saved, without, GREEN)}  -{fmt(t_saved)}'
+                f'  {GREEN}({round(t_saved/without*100) if without else 0}% removed){RESET}'
+            )
+        lines.append('')
+
+    if inp > 0 or out_tok > 0:
+        total_io = inp + out_tok
+        lines.append(f'  {DIM}{"Input  →":<20}{RESET}{flow_bar(inp, max(total_io,1), PURPLE)}  {fmt(inp)} tok')
+        lines.append(f'  {DIM}{"Output ←":<20}{RESET}{flow_bar(out_tok, max(total_io,1), YELLOW)}  {fmt(out_tok)} tok')
+        lines.append(f'  {DIM}{"Context fill":<20}{RESET}{flow_bar(inp, limit, RED if inp/limit>0.85 else YELLOW if inp/limit>0.70 else DIM)}  {round(inp/limit*100) if limit else 0}% of {fmt(limit)}')
+
+    return '\n'.join(lines)
+
+
 def main():
     s = load()
     inp       = s.get('input_tokens_est', 0)
@@ -136,26 +174,26 @@ def main():
     comp_ratio  = round(without / inp, 1) if inp > 0 else None
     # Cost ROI: cost_saved / actual_cost  (e.g. 4.2× — you get $4.20 back per $1 spent)
     roi         = round(saved_cost_val / actual_cost, 1) if actual_cost > 0.00001 else None
-    # Context efficiency: how much MORE work fits vs without Pith
-    ctx_eff     = round(without / inp, 1) if inp > 0 else None   # same as comp_ratio
 
     print()
     print(f'  {PURPLE}{BOLD}◆ PITH{RESET}{DIM} · SESSION STATUS{RESET}')
     print(f'  {DIM}{"─" * 36}{RESET}')
     print()
-    print(f'  {DIM}{"Context":<16}{RESET}[{bar(fill)}]  {pct_str}')
     print(f'  {DIM}{"Mode":<16}{RESET}{mode.upper()}')
     print(f'  {DIM}{"Budget":<16}{RESET}{budget_str}')
     print(f'  {DIM}{"Model":<16}{RESET}{model_str}')
+
+    # ── Token flow diagram ────────────────────────────────────────────────────
+    print()
+    print(flow_chart(inp, out_tok, t_saved, without, limit))
 
     # Key metrics row (only when we have real session data)
     if t_saved > 0 and inp > 0:
         print()
         ratio_str = f'{GREEN}{BOLD}{comp_ratio}:1{RESET}' if comp_ratio else '—'
         roi_str   = f'{GREEN}{BOLD}{roi}×{RESET}' if roi else '—'
-        pct_red   = pct
         print(f'  {DIM}{"Compression ratio":<18}{RESET}{ratio_str}  '
-              f'{DIM}({pct_red}% fewer tokens — {fmt(t_saved)} saved of {fmt(without)} baseline){RESET}')
+              f'{DIM}({pct}% fewer tokens — {fmt(t_saved)} saved of {fmt(without)} baseline){RESET}')
         if roi:
             print(f'  {DIM}{"Cost ROI":<18}{RESET}{roi_str}  '
                   f'{DIM}({fmt_cost(saved_cost_val)} saved per {fmt_cost(actual_cost)} spent){RESET}')
@@ -221,6 +259,8 @@ def main():
     if offload_t + offload_s:
         print(row('Offloaded',   f'~{fmt(offload_t + offload_s)}', DIM))
     print(row('Cost saved',   fmt_cost(lifetime_cost), DIM))
+    print()
+    print(f'  {DIM}Run /pith report to open an interactive HTML dashboard{RESET}')
     print()
 
 

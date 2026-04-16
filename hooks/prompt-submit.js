@@ -171,7 +171,8 @@ process.stdin.on('end', () => {
   /pith symbol --list <f> List all symbols in a file
 
 ── Session & Config ────────────────────────────────────────────
-  /pith status           Token usage health report
+  /pith status           Token usage health report (with ASCII flow chart)
+  /pith report           Generate interactive HTML dashboard (opens in browser)
   /pith hindsight        Identify stale tool results consuming context — recommends /compact
   /pith escalate         Show auto-escalation status and thresholds
   /pith escalate on|off  Enable/disable SWEzze auto-escalation
@@ -271,6 +272,10 @@ Display this reference any time with: /pith help`
         // /pith reset-cache — force full session-start injection next session
         saveProjectState({ session_injection_hash: null });
         out.push('PITH: session cache cleared. Full rules will be injected on next session start.');
+
+      } else if (arg === 'report') {
+        // /pith report — generate HTML dashboard and open in browser
+        out.push(runTool('report.py', [], root));
 
       } else if (arg === 'hindsight') {
         // /pith hindsight — retrospective stale context analysis

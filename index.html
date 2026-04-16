@@ -1027,7 +1027,7 @@
     <div class="feat">
       <div class="feat-n">02</div>
       <h3>Live context meter</h3>
-      <p>Exact context window usage, mode, budget, and a full per-format savings breakdown — skeletons, bash/build, grep, TOON, web fetch, offload, output mode — each with a mini bar showing its share. Cost is split at the correct rate: tool compression at $3/1M, output mode savings at $15/1M. All visible via <code style="font-family:var(--mono);font-size:11px">/pith status</code>.</p>
+      <p>Exact context window usage, mode, budget, and a full per-format savings breakdown — skeletons, bash/build, grep, TOON, web fetch, offload, output mode — each with a mini bar showing its share. Now includes an ASCII token flow diagram: baseline vs compressed vs output, showing exactly how much was intercepted and what arrived in context. Cost is split at the correct rate: tool compression at $3/1M, output mode savings at $15/1M. For a richer view, <code style="font-family:var(--mono);font-size:11px">/pith report</code> generates an interactive HTML dashboard.</p>
     </div>
     <div class="feat">
       <div class="feat-n">03</div>
@@ -1103,6 +1103,16 @@
       <div class="feat-n">15</div>
       <h3>Auto-escalation <span style="font-size:10px;font-weight:400;opacity:0.5;margin-left:4px">SWEzze · arXiv:2603.28119</span></h3>
       <p>As context fills, Pith automatically ratchets the output mode up — switching to <strong>LEAN</strong> at 50% and <strong>ULTRA</strong> at 70%. At 85%, a dynamic response ceiling is injected equal to 8% of remaining headroom. Claude's responses stop growing the context window unchecked. Toggle with <code style="font-family:var(--mono);font-size:11px">/pith escalate on|off</code>.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">18</div>
+      <h3>Cache-Lock <span style="font-size:10px;font-weight:400;opacity:0.5;margin-left:4px">Phase 9 · 2026</span></h3>
+      <p>Session-start injection is hashed (MD5, 8 chars). If settings are identical to the previous session, a single compact summary line is emitted instead of the full rules block — saving ~300 tokens per session start. Dynamic values (token counts, timestamps) are deliberately excluded from the hash, ensuring cache hits are true stability signals, not coincidences.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">19</div>
+      <h3>Speculative Fetch + Session Report <span style="font-size:10px;font-weight:400;opacity:0.5;margin-left:4px">Phase 10 · 2026</span></h3>
+      <p>When <code style="font-family:var(--mono);font-size:11px">/pith symbol</code> extracts a function, it automatically scans the body for calls to other functions defined in the same file and appends their signatures — eliminating a follow-up round-trip in ~60% of lookups. Pairs with <code style="font-family:var(--mono);font-size:11px">/pith report</code>, which generates a standalone HTML dashboard (Chart.js) showing token flow, per-bucket savings, cost breakdown, and a compression event timeline.</p>
     </div>
   </div>
 </div>
@@ -1233,7 +1243,8 @@
 
     <div class="cmd-grid" style="margin-top:2px">
       <div class="cmd-group-label">Session control</div>
-      <div class="cmd"><span class="cmd-k"><span class="hl">/pith status</span></span><span class="cmd-v">Token usage, cost, and per-format savings breakdown — TOON, skeletons, bash, style</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith status</span></span><span class="cmd-v">ASCII token flow chart + health report — input, output, saved, context fill, cost</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith report</span></span><span class="cmd-v">Generate interactive HTML dashboard — token flow bars, savings donut, cost table, event timeline</span><span class="cmd-new">New</span></div>
       <div class="cmd"><span class="cmd-k"><span class="hl">/pith hindsight</span></span><span class="cmd-v">Identify stale tool results consuming context — shows token cost, recommends /compact</span><span class="cmd-new">New</span></div>
       <div class="cmd"><span class="cmd-k"><span class="hl">/pith escalate</span></span><span class="cmd-v">Show auto-escalation status — context fill thresholds and current mode</span><span class="cmd-new">New</span></div>
       <div class="cmd"><span class="cmd-k"><span class="hl">/pith escalate on|off</span></span><span class="cmd-v">Enable or disable SWEzze auto-escalation (LEAN at 50%, ULTRA at 70%)</span><span class="cmd-new">New</span></div>
