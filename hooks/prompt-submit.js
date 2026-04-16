@@ -139,6 +139,30 @@ process.stdin.on('end', () => {
       } else if (arg === 'optimize-cache') {
         out.push(optimizeCache(root));
 
+      } else if (arg === 'budget') {
+        // /pith budget <n|off> — alias for /budget
+        const budgetArg = (rest || '').toLowerCase();
+        if (budgetArg === 'off' || budgetArg === '0') {
+          saveProjectState({ budget: null });
+          out.push('TOKEN BUDGET: cleared.');
+        } else {
+          const n = parseInt(budgetArg, 10);
+          if (!isNaN(n) && n > 0) {
+            saveProjectState({ budget: n });
+            out.push(`HARD TOKEN LIMIT: ≤${n} tokens this response. Count as you write. Stop when done. No apology for brevity.`);
+          } else {
+            out.push('[PITH: /pith budget requires a number or "off". Example: /pith budget 150]');
+          }
+        }
+
+      } else if (arg === 'focus') {
+        // /pith focus <file> — alias for /focus
+        if (!rest) {
+          out.push('[PITH: /pith focus requires a file path. Example: /pith focus src/main.js]');
+        } else {
+          out.push(runTool('focus.py', [rest, '--question', data.prompt || ''], root));
+        }
+
       } else if (SKILL_CMDS.has(arg)) {
         // /pith debug, /pith review, /pith install, etc. — handled by Claude Code skill system
         // No injection needed; skill file provides instructions.
@@ -169,7 +193,7 @@ process.stdin.on('end', () => {
 
     // ── Per-message: inject active budget ──────────────────────────────────
     const budget = loadProjectState().budget;
-    if (budget && !lower.startsWith('/pith') && !lower.startsWith('/budget')) {
+    if (budget && !lower.startsWith('/pith') && !lower.startsWith('/budget') && !lower.startsWith('/focus')) {
       out.push(`[TOKEN LIMIT: ≤${budget} tokens this response]`);
     }
 
