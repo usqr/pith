@@ -1022,12 +1022,12 @@
     <div class="feat">
       <div class="feat-n">01</div>
       <h3>Tool output compression</h3>
-      <p>File reads return imports, signatures, and types — not every line. Bash returns errors and a summary. Grep caps at 25 matches. Automatic, session-wide, always on.</p>
+      <p>File reads return imports, signatures, and types — not every line. JSON outputs are serialised as <strong>TOON</strong> (~40% fewer tokens). Bash returns errors and a summary. Grep caps at 25 matches. Automatic, session-wide, always on.</p>
     </div>
     <div class="feat">
       <div class="feat-n">02</div>
       <h3>Live context meter</h3>
-      <p>Exact context window usage, current mode, token budget, tokens compressed, and cost saved — all visible via <code style="font-family:var(--mono);font-size:11px">/pith status</code> or the session statusline.</p>
+      <p>Exact context window usage, mode, budget, and a per-format savings breakdown — TOON, skeletons, bash — all visible via <code style="font-family:var(--mono);font-size:11px">/pith status</code> or the session statusline.</p>
     </div>
     <div class="feat">
       <div class="feat-n">03</div>
@@ -1208,11 +1208,12 @@
 
     <div class="cmd-grid" style="margin-top:2px">
       <div class="cmd-group-label">Session control</div>
-      <div class="cmd"><span class="cmd-k"><span class="hl">/pith status</span></span><span class="cmd-v">Token usage, cost breakdown, mode, budget, and savings for this session</span></div>
-      <div class="cmd"><span class="cmd-k"><span class="hl">/budget &lt;N&gt;</span></span><span class="cmd-v">Set a hard token ceiling — enforced, not suggested</span></div>
-      <div class="cmd"><span class="cmd-k"><span class="hl">/budget off</span></span><span class="cmd-v">Clear the token budget ceiling</span></div>
-      <div class="cmd"><span class="cmd-k"><span class="hl">/pith recall</span></span><span class="cmd-v">Restore last session's mode, wiki, and budget mid-session — one line confirm</span><span class="cmd-new">New</span></div>
-      <div class="cmd"><span class="cmd-k"><span class="hl">/pith configure</span></span><span class="cmd-v">Interactive config wizard — mode → wiki → budget → auto-compact, one question at a time</span><span class="cmd-new">New</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith status</span></span><span class="cmd-v">Token usage, cost, and per-format savings breakdown — TOON, skeletons, bash, style</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith budget &lt;N&gt;</span></span><span class="cmd-v">Set a hard token ceiling — enforced, not suggested</span><span class="cmd-new">New</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith budget off</span></span><span class="cmd-v">Clear the token budget ceiling</span><span class="cmd-new">New</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith focus &lt;file&gt;</span></span><span class="cmd-v">Focus context on a specific file for the current task</span><span class="cmd-new">New</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith recall</span></span><span class="cmd-v">Restore last session's mode, wiki, and budget mid-session — one line confirm</span></div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith configure</span></span><span class="cmd-v">Interactive config wizard — mode → wiki → budget → auto-compact, one question at a time</span></div>
     </div>
 
     <div class="cmd-grid" style="margin-top:2px">
@@ -1242,6 +1243,7 @@
 
     <div class="cmd-grid" style="margin-top:2px">
       <div class="cmd-group-label">Onboarding &amp; help</div>
+      <div class="cmd"><span class="cmd-k"><span class="hl">/pith help</span></span><span class="cmd-v">Full command reference — every command grouped by category, in one shot</span><span class="cmd-new">New</span></div>
       <div class="cmd"><span class="cmd-k"><span class="hl">/pith tour</span></span><span class="cmd-v">Interactive guided tour of every Pith feature — resumable, skippable</span></div>
       <div class="cmd"><span class="cmd-k"><span class="hl">/pith setup</span></span><span class="cmd-v">Run first-session wiki onboarding in any project</span></div>
     </div>
