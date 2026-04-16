@@ -59,6 +59,12 @@
     .logo {
       font-size: 15px; font-weight: 600; letter-spacing: -0.01em;
       color: var(--fg); text-decoration: none; margin-right: auto;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .logo-mark { flex-shrink: 0; }
+    .install-or {
+      font-size: 11px; color: var(--fg4); letter-spacing: 0.08em;
+      text-transform: uppercase; user-select: none;
     }
     .nav-links { display: flex; gap: 28px; list-style: none; margin-right: 28px; }
     .nav-links a {
@@ -413,7 +419,22 @@
 
 <!-- ━━━━━━━━━━━━━━━━━━━━ NAV ━━━━━━━━━━━━━━━━━━━━ -->
 <nav>
-  <a class="logo" href="#">Pith</a>
+  <a class="logo" href="#">
+    <svg class="logo-mark" width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <!-- outer ring -->
+      <circle cx="10" cy="10" r="9" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
+      <!-- mid ring -->
+      <circle cx="10" cy="10" r="5.5" stroke="rgba(255,255,255,0.45)" stroke-width="1.2"/>
+      <!-- core dot -->
+      <circle cx="10" cy="10" r="2" fill="#fff"/>
+      <!-- compression tick marks -->
+      <line x1="10" y1="1.5" x2="10" y2="3.5" stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-linecap="round"/>
+      <line x1="10" y1="16.5" x2="10" y2="18.5" stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-linecap="round"/>
+      <line x1="1.5" y1="10" x2="3.5" y2="10" stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-linecap="round"/>
+      <line x1="16.5" y1="10" x2="18.5" y2="10" stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-linecap="round"/>
+    </svg>
+    Pith
+  </a>
   <ul class="nav-links">
     <li><a href="#compression">Compression</a></li>
     <li><a href="#layers">Layers</a></li>
@@ -461,9 +482,14 @@
       <div class="install-box">
         <span class="install-ps">$</span>
         <code class="install-code">bash &lt;(curl -s https://raw.githubusercontent.com/abhisekjha/pith/main/install.sh)</code>
-        <button class="install-copy" onclick="cp(this)">Copy</button>
+        <button class="install-copy" onclick="cp(this)" data-cmd="bash <(curl -s https://raw.githubusercontent.com/abhisekjha/pith/main/install.sh)">Copy</button>
       </div>
-      <span class="gh-link" style="color:var(--fg4);font-size:12px">or: git clone https://github.com/abhisekjha/pith &amp;&amp; bash pith/install.sh</span>
+      <span class="install-or">or</span>
+      <div class="install-box">
+        <span class="install-ps">$</span>
+        <code class="install-code">git clone https://github.com/abhisekjha/pith &amp;&amp; bash pith/install.sh</code>
+        <button class="install-copy" onclick="cp(this)" data-cmd="git clone https://github.com/abhisekjha/pith && bash pith/install.sh">Copy</button>
+      </div>
       <a class="gh-link" href="https://github.com/abhisekjha/pith" target="_blank">View on GitHub →</a>
     </div>
   </div>
@@ -1242,12 +1268,19 @@
   <div class="cta-light"></div>
   <h2>Install once.<br>Save forever.</h2>
   <p>One command. Works in every Claude Code project from that point on.</p>
-  <div class="install-box" style="display:inline-flex; position:relative;">
-    <span class="install-ps">$</span>
-    <code class="install-code">bash &lt;(curl -s https://raw.githubusercontent.com/abhisekjha/pith/main/install.sh)</code>
-    <button class="install-copy" onclick="cp(this)">Copy</button>
+  <div class="install-wrap" style="align-items:center">
+    <div class="install-box" style="display:inline-flex; position:relative;">
+      <span class="install-ps">$</span>
+      <code class="install-code">bash &lt;(curl -s https://raw.githubusercontent.com/abhisekjha/pith/main/install.sh)</code>
+      <button class="install-copy" onclick="cp(this)" data-cmd="bash <(curl -s https://raw.githubusercontent.com/abhisekjha/pith/main/install.sh)">Copy</button>
+    </div>
+    <span class="install-or">or</span>
+    <div class="install-box" style="display:inline-flex; position:relative;">
+      <span class="install-ps">$</span>
+      <code class="install-code">git clone https://github.com/abhisekjha/pith &amp;&amp; bash pith/install.sh</code>
+      <button class="install-copy" onclick="cp(this)" data-cmd="git clone https://github.com/abhisekjha/pith && bash pith/install.sh">Copy</button>
+    </div>
   </div>
-  <p style="margin-top:16px;font-size:13px;color:var(--fg3);letter-spacing:-0.01em">or: <code style="font-family:var(--mono);font-size:12px;color:rgba(255,255,255,0.35)">git clone https://github.com/abhisekjha/pith &amp;&amp; bash pith/install.sh</code></p>
 </div>
 
 <!-- ━━━━━━━━━━━━━━━━━━━━ FOOTER ━━━━━━━━━━━━━━━━━━━━ -->
@@ -1265,7 +1298,8 @@
 <script>
   // ── Copy button ──────────────────────────────────────────────────────────────
   function cp(btn) {
-    navigator.clipboard.writeText('bash <(curl -s https://raw.githubusercontent.com/abhisekjha/pith/main/install.sh)').then(() => {
+    const cmd = btn.dataset.cmd || 'bash <(curl -s https://raw.githubusercontent.com/abhisekjha/pith/main/install.sh)';
+    navigator.clipboard.writeText(cmd).then(() => {
       const o = btn.textContent;
       btn.textContent = 'Copied'; btn.style.color = 'var(--green)';
       setTimeout(() => { btn.textContent = o; btn.style.color = ''; }, 2000);
