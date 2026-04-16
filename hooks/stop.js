@@ -44,9 +44,19 @@ process.stdin.on('end', () => {
       }
     }
 
-    // Accumulate lifetime total
+    // Accumulate lifetime totals
     const sessionSaved = proj.tokens_saved_session || 0;
     updates.tokens_saved_total = (proj.tokens_saved_total || 0) + sessionSaved;
+
+    // Lifetime cost saved — split by token type (input vs output rate)
+    const IN_COST_PER_M  = 3.0;   // Sonnet 4.6 input
+    const OUT_COST_PER_M = 15.0;  // Sonnet 4.6 output
+    const outSaved       = (proj.output_savings_session || 0) + (updates.output_savings_session
+                           ? (updates.output_savings_session - (proj.output_savings_session || 0)) : 0);
+    const toolSaved      = Math.max(0, sessionSaved - outSaved);
+    const sessionCostSaved = (toolSaved  / 1_000_000 * IN_COST_PER_M)
+                           + (outSaved   / 1_000_000 * OUT_COST_PER_M);
+    updates.cost_saved_total = (proj.cost_saved_total || 0) + sessionCostSaved;
 
     saveProjectState(updates);
   } catch (e) { /* silent */ }

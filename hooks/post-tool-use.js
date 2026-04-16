@@ -116,6 +116,9 @@ process.stdin.on('end', () => {
           const offloadSaved = afterTokens - Math.ceil(finalOutput.length / 4);
           updates.offload_savings_session = (proj.offload_savings_session || 0) + offloadSaved;
           updates.offload_savings_total   = (proj.offload_savings_total   || 0) + offloadSaved;
+          // Offload savings are additional context reduction on top of compression —
+          // include them in the running total so bucket percentages sum to ≤100%
+          updates.tokens_saved_session    = (updates.tokens_saved_session || 0) + offloadSaved;
           // Log this result as stale-eligible (turn stamped in prompt-submit)
           const staleList = (proj.stale_results || []).slice(-20);
           staleList.push({
