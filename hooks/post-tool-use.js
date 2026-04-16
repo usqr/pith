@@ -98,6 +98,32 @@ process.stdin.on('end', () => {
       } else if (comprFormat === 'bash') {
         updates.bash_savings_session = (proj.bash_savings_session || 0) + savedTokens;
       }
+      // ── Offload large results to file ────────────────────────────────────
+      // If still >offload_threshold tokens after compression, write to
+      // ~/.pith/tmp/ and return a compact pointer. Result never enters context.
+      const OFFLOAD_THRESHOLD = config.offload_threshold || 300;
+      let finalOutput   = compressed;
+      let offloadedFile = null;
+
+      if (afterTokens > OFFLOAD_THRESHOLD) {
+        offloadedFile = offloadResult(toolName, toolInput, compressed, afterTokens);
+        if (offloadedFile) {
+          finalOutput = offloadedFile.pointer;
+          const offloadSaved = afterTokens - Math.ceil(finalOutput.length / 4);
+          updates.offload_savings_session = (proj.offload_savings_session || 0) + offloadSaved;
+          updates.offload_savings_total   = (proj.offload_savings_total   || 0) + offloadSaved;
+          // Log this result as stale-eligible (turn stamped in prompt-submit)
+          const staleList = (proj.stale_results || []).slice(-20);
+          staleList.push({
+            turn:   proj.turn_count || 0,
+            tokens: afterTokens,
+            label:  (toolInput.file_path || toolInput.command || toolInput.pattern || toolName).slice(0, 60),
+            file:   offloadedFile.filepath,
+          });
+          updates.stale_results = staleList;
+        }
+      }
+
       saveProjectState(updates);
 
       // ── Telemetry log ─────────────────────────────────────────────────────
@@ -110,6 +136,7 @@ process.stdin.on('end', () => {
           session:       proj.session_start || '',
           tool:          toolName,
           format:        comprFormat,
+          offloaded:     !!offloadedFile,
           label:         (toolInput.file_path || toolInput.command || toolInput.pattern || '').slice(0, 80),
           before_lines:  lines.length,
           after_lines:   compressed.split('\n').length,
@@ -122,7 +149,7 @@ process.stdin.on('end', () => {
         fs.appendFileSync(require('path').join(pDir, 'telemetry.jsonl'), JSON.stringify(entry) + '\n');
       } catch (e) { /* never block */ }
 
-      process.stdout.write(JSON.stringify({ output: compressed }));
+      process.stdout.write(JSON.stringify({ output: finalOutput }));
     }
   } catch (e) { /* silent — never break a session */ }
   process.exit(0);
@@ -451,4 +478,37 @@ function headTail(lines, label, head, tail) {
          lines.slice(0, head).join('\n') +
          `\n\n[...${omitted} lines omitted...]\n\n` +
          lines.slice(-tail).join('\n');
+}
+
+// ── OFFLOAD ──────────────────────────────────────────────────────────────────
+// Writes large compressed output to ~/.pith/tmp/ and returns a compact pointer.
+// The full content is available via Read tool; the context only sees the summary.
+
+function offloadResult(toolName, toolInput, content, tokenCount) {
+  try {
+    const os     = require('os');
+    const tmpDir = path.join(os.homedir(), '.pith', 'tmp');
+    fs.mkdirSync(tmpDir, { recursive: true });
+
+    const label    = (toolInput.file_path || toolInput.command || toolInput.pattern || 'output')
+                       .replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 40);
+    const filename = `${toolName.toLowerCase()}_${label}_${Date.now()}.log`;
+    const filepath = path.join(tmpDir, filename);
+
+    fs.writeFileSync(filepath, content, 'utf8');
+
+    // Build a 3-line summary from the content
+    const clines  = content.split('\n').filter(Boolean);
+    const summary = clines.slice(0, 3).join(' · ').slice(0, 150);
+
+    const pointer =
+      `[PITH OFFLOAD: ${tokenCount} tokens → stored to free context\n` +
+      ` Summary: ${summary}${clines.length > 3 ? '…' : ''}\n` +
+      ` Full output: Read("${filepath}")\n` +
+      ` Re-run the tool if you need fresh results]`;
+
+    return { pointer, filepath };
+  } catch (e) {
+    return null; // never block — fall through to full compressed output
+  }
 }

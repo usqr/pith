@@ -81,7 +81,9 @@ def main():
     toon_s    = s.get('toon_savings_session', 0)
     skel_s    = s.get('skeleton_savings_session', 0)
     bash_s    = s.get('bash_savings_session', 0)
+    offload_s = s.get('offload_savings_session', 0)
     out_s     = s.get('output_savings_session', 0)
+    offload_t = s.get('offload_savings_total', 0)
     compact   = s.get('compact_count_session', 0)
     limit     = s.get('context_limit', 200_000)
     mode      = s.get('mode', 'off')
@@ -132,6 +134,8 @@ def main():
         print(row('Skeletons',     fmt(skel_s)))
     if bash_s:
         print(row('Bash/build',    fmt(bash_s)))
+    if offload_s:
+        print(row('Offloaded',     fmt(offload_s), ''))
     if out_s:
         print(row('Style output',  fmt(out_s)))
     if compact:
@@ -149,7 +153,9 @@ def main():
     print(f'  {DIM}Lifetime{RESET}')
     print(row('Tokens saved', f'~{fmt(total + t_saved)}',              DIM))
     if toon_total + toon_s:
-        print(row('TOON saved',  f'~{fmt(toon_total + toon_s)}',       DIM))
+        print(row('TOON saved',    f'~{fmt(toon_total + toon_s)}',     DIM))
+    if offload_t + offload_s:
+        print(row('Offloaded',     f'~{fmt(offload_t + offload_s)}',   DIM))
     print(row('Cost saved',   fmt_cost(total_cost_saved + saved_cost), DIM))
     print()
 

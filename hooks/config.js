@@ -21,6 +21,8 @@ const DEFAULTS = {
   auto_compact_threshold: 0.70,
   tool_compress: true,
   tool_compress_threshold: 30,   // lines before compression kicks in
+  offload_threshold: 300,        // tokens after compression before offloading to file
+  offload_stale_turns: 5,        // turns before a result is considered stale
   budget: null,
   wiki_dir: 'wiki',
 };

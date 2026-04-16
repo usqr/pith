@@ -282,8 +282,24 @@ Display this reference any time with: /pith help`
     }
 
     // ── Token estimate tracking ────────────────────────────────────────────
-    const est = Math.ceil(prompt.length / 4);
-    saveProjectState({ input_tokens_est: (proj.input_tokens_est || 0) + est });
+    const est      = Math.ceil(prompt.length / 4);
+    const newTurn  = (proj.turn_count || 0) + 1;
+    saveProjectState({ input_tokens_est: (proj.input_tokens_est || 0) + est, turn_count: newTurn });
+
+    // ── Stale result notice ────────────────────────────────────────────────
+    // After N turns, remind Claude that large offloaded results are in history
+    // but no longer needed — it can ignore them without re-reading.
+    const STALE_TURNS  = config.offload_stale_turns || 5;
+    const staleResults = (proj.stale_results || []);
+    const nowStale     = staleResults.filter(r => (newTurn - r.turn) >= STALE_TURNS);
+    if (nowStale.length && !lower.startsWith('/pith')) {
+      const list = nowStale.map(r => `  · ${r.label} (${r.tokens}t, turn ${r.turn})`).join('\n');
+      out.push(
+        `[PITH: ${nowStale.length} old tool result(s) are in your history but offloaded — ` +
+        `safe to ignore unless you need them:\n${list}\n` +
+        `Use Read("<path>") from the PITH OFFLOAD notice to access if needed]`
+      );
+    }
 
     if (out.length) process.stdout.write(out.filter(Boolean).join('\n\n'));
   } catch (e) { /* silent */ }

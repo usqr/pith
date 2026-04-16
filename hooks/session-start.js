@@ -18,17 +18,36 @@ const proj = loadProjectState();
 
 // Reset per-session counters
 saveProjectState({
-  session_start:           new Date().toISOString(),
-  tool_savings_session:    0,
-  toon_savings_session:    0,
-  skeleton_savings_session:0,
-  bash_savings_session:    0,
-  output_savings_session:  0,
-  compact_count_session:   0,
-  input_tokens_est:        0,
-  output_tokens_est:       0,
-  compact_nudged:          false,
+  session_start:            new Date().toISOString(),
+  tool_savings_session:     0,
+  toon_savings_session:     0,
+  skeleton_savings_session: 0,
+  bash_savings_session:     0,
+  offload_savings_session:  0,
+  output_savings_session:   0,
+  compact_count_session:    0,
+  input_tokens_est:         0,
+  output_tokens_est:        0,
+  turn_count:               0,
+  stale_results:            [],
+  compact_nudged:           false,
 });
+
+// ── Clean up tmp files older than 24 h ────────────────────────────────────
+try {
+  const os      = require('os');
+  const tmpDir  = require('path').join(os.homedir(), '.pith', 'tmp');
+  const fs      = require('fs');
+  const cutoff  = Date.now() - 24 * 60 * 60 * 1000;
+  if (fs.existsSync(tmpDir)) {
+    fs.readdirSync(tmpDir).forEach(f => {
+      const fp = require('path').join(tmpDir, f);
+      try {
+        if (fs.statSync(fp).mtimeMs < cutoff) fs.unlinkSync(fp);
+      } catch (e) { /* skip locked files */ }
+    });
+  }
+} catch (e) { /* never block session start */ }
 
 const root = pluginRoot();
 const output = [];
