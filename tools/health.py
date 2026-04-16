@@ -85,6 +85,7 @@ def main():
     out_s     = s.get('output_savings_session', 0)
     offload_t = s.get('offload_savings_total', 0)
     compact   = s.get('compact_count_session', 0)
+    esc_s     = s.get('escalation_count_session', 0)
     limit     = s.get('context_limit', 200_000)
     mode      = s.get('mode', 'off')
     budget    = s.get('budget')
@@ -140,6 +141,8 @@ def main():
         print(row('Style output',  fmt(out_s)))
     if compact:
         print(row('Auto-compacts', f'{compact}×'))
+    if esc_s:
+        print(row('Auto-escalations', f'{esc_s}×'))
     print(row('Total saved',   f'~{fmt(t_saved)} ({pct}%)', GREEN + BOLD))
     print(row('Without Pith', fmt(without)))
     print()

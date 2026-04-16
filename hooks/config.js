@@ -23,6 +23,10 @@ const DEFAULTS = {
   tool_compress_threshold: 30,   // lines before compression kicks in
   offload_threshold: 300,        // tokens after compression before offloading to file
   offload_stale_turns: 5,        // turns before a result is considered stale
+  auto_escalate: true,           // SWEzze: ratchet output mode as context fills
+  escalate_lean_at:  0.50,       // context fill % to auto-switch to lean (if mode is off)
+  escalate_ultra_at: 0.70,       // context fill % to auto-switch to ultra
+  context_limit: 200000,         // default Claude context window size
   budget: null,
   wiki_dir: 'wiki',
 };

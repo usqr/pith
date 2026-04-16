@@ -172,6 +172,8 @@ process.stdin.on('end', () => {
 
 ── Session & Config ────────────────────────────────────────────
   /pith status           Token usage health report
+  /pith escalate         Show auto-escalation status and thresholds
+  /pith escalate on|off  Enable/disable SWEzze auto-escalation
   /pith recall           Restore last session's mode/wiki/budget
   /pith configure        Interactive config wizard
   /pith tour             7-step interactive guided tour
@@ -264,6 +266,28 @@ Display this reference any time with: /pith help`
           );
         }
 
+      } else if (arg === 'escalate') {
+        // /pith escalate on|off — toggle SWEzze auto-escalation
+        const sub = (rest || '').toLowerCase().trim();
+        if (sub === 'off' || sub === 'disable') {
+          saveProjectState({ auto_escalate_disabled: true });
+          out.push('PITH: auto-escalation disabled. Output mode will not change automatically as context fills.');
+        } else if (sub === 'on' || sub === 'enable') {
+          saveProjectState({ auto_escalate_disabled: false });
+          out.push('PITH: auto-escalation enabled. Mode will ratchet to LEAN at 50% context, ULTRA at 70%.');
+        } else {
+          const disabled = loadProjectState().auto_escalate_disabled;
+          const fill = Math.round((proj.input_tokens_est || 0) / (config.context_limit || 200000) * 100);
+          out.push(
+            `PITH AUTO-ESCALATION\n` +
+            `  Status:        ${disabled ? 'disabled' : 'enabled'}\n` +
+            `  Context fill:  ${fill}%\n` +
+            `  Lean at:       ${Math.round((config.escalate_lean_at ?? 0.50) * 100)}%\n` +
+            `  Ultra at:      ${Math.round((config.escalate_ultra_at ?? 0.70) * 100)}%\n` +
+            `  /pith escalate on|off  — toggle`
+          );
+        }
+
       } else if (SKILL_CMDS.has(arg)) {
         // /pith debug, /pith review, /pith install, etc. — handled by Claude Code skill system
         // No injection needed; skill file provides instructions.
@@ -290,6 +314,56 @@ Display this reference any time with: /pith help`
     if (lower.startsWith('/focus ')) {
       const filePath = prompt.slice('/focus '.length).trim();
       out.push(runTool('focus.py', [filePath, '--question', data.prompt || ''], root));
+    }
+
+    // ── SWEzze auto-escalation ─────────────────────────────────────────────
+    // Inspired by OCD/SWEzze (arXiv:2603.28119): ratchet output compression
+    // as context fills to prevent responses from eating the remaining headroom.
+    {
+      const esc_proj = loadProjectState();
+      if (config.auto_escalate !== false && !esc_proj.auto_escalate_disabled && !lower.startsWith('/pith')) {
+        const limit      = config.context_limit || 200000;
+        const used       = esc_proj.input_tokens_est || 0;
+        const fill       = used / limit;
+        const curMode    = esc_proj.mode || config.default_mode || 'off';
+        const LEAN_AT    = config.escalate_lean_at  ?? 0.50;
+        const ULTRA_AT   = config.escalate_ultra_at ?? 0.70;
+        const CEIL_AT    = 0.85;
+
+        if (fill >= ULTRA_AT && curMode !== 'ultra') {
+          saveProjectState({
+            mode: 'ultra',
+            _escalated_from: curMode,
+            escalation_count_session: (esc_proj.escalation_count_session || 0) + 1,
+          });
+          out.push(
+            `[PITH AUTO-ESCALATED: context ${Math.round(fill * 100)}% full → ULTRA compression active.\n` +
+            ` Previous mode: ${curMode}. Run /pith escalate off to disable.]\n\n` +
+            modeRules('ultra', root)
+          );
+        } else if (fill >= LEAN_AT && (curMode === 'off' || !curMode)) {
+          saveProjectState({
+            mode: 'lean',
+            _escalated_from: curMode,
+            escalation_count_session: (esc_proj.escalation_count_session || 0) + 1,
+          });
+          out.push(
+            `[PITH AUTO-ESCALATED: context ${Math.round(fill * 100)}% full → LEAN compression active.\n` +
+            ` Run /pith escalate off to disable.]\n\n` +
+            modeRules('lean', root)
+          );
+        }
+
+        // Dynamic response ceiling at 85%+ — cap response to 8% of remaining headroom
+        if (fill >= CEIL_AT) {
+          const remaining = limit - used;
+          const ceiling   = Math.max(80, Math.floor(remaining * 0.08));
+          out.push(
+            `[PITH: context ${Math.round(fill * 100)}% full — ` +
+            `keep this response under ${ceiling} tokens to preserve headroom]`
+          );
+        }
+      }
     }
 
     // ── Per-message: inject active budget ──────────────────────────────────
