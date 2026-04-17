@@ -57,9 +57,29 @@ def row(label: str, value: str, color: str = '') -> str:
     return f'  {DIM}{label:<16}{RESET}{val:>8}'
 
 
-# Pricing (per 1M tokens) — update if model changes
-IN_COST_PER_M  = 3.0   # Sonnet 4.6 input
-OUT_COST_PER_M = 15.0  # Sonnet 4.6 output
+# Pricing per 1M tokens: (input, output)
+PRICING: dict[str, tuple[float, float]] = {
+    'opus-4-7':   (5.0,  25.0),  'opus-4-6':   (5.0,  25.0),  'opus-4-5':  (5.0,  25.0),
+    'opus-4-1':   (15.0, 75.0),  'opus-4':     (15.0, 75.0),
+    'sonnet-4-6': (3.0,  15.0),  'sonnet-4-5': (3.0,  15.0),  'sonnet-4':  (3.0,  15.0),
+    'sonnet-3-7': (3.0,  15.0),
+    'haiku-4-5':  (1.0,  5.0),   'haiku-3-5':  (0.8,  4.0),
+    'opus-3':     (15.0, 75.0),  'haiku-3':    (0.25, 1.25),
+}
+
+def get_pricing(model: str | None) -> tuple[float, float]:
+    if not model:
+        return (3.0, 15.0)
+    m = model.lower().replace('claude-', '').replace('_', '-')
+    for key in sorted(PRICING, key=len, reverse=True):
+        if key in m:
+            return PRICING[key]
+    return (3.0, 15.0)
+
+def model_label(model: str | None) -> str:
+    if not model:
+        return 'Unknown (defaulting to Sonnet 4.6 rates)'
+    return model
 
 
 def cost(tokens: int, per_m: float) -> float:
@@ -141,6 +161,9 @@ def main():
     total_cost_saved = s.get('cost_saved_total', 0.0)
     turn_count   = s.get('turn_count_session', 0)
 
+    model_id = s.get('model')
+    IN_COST_PER_M, OUT_COST_PER_M = get_pricing(model_id)
+
     fill    = inp / limit if limit else 0
     # Total without Pith = what we consumed + what Pith removed
     without = inp + t_saved
@@ -168,7 +191,8 @@ def main():
 
     budget_str = f'\u2264{budget} tok/resp' if budget else 'none'
     pct_str    = f'{pct_color}{pct_fill}%{RESET}' if pct_color else f'{pct_fill}%'
-    model_str  = f'Sonnet 4.6  {DIM}(in ${IN_COST_PER_M}/1M · out ${OUT_COST_PER_M}/1M){RESET}'
+    _mlabel    = model_id if model_id else 'unknown (Sonnet 4.6 rates)'
+    model_str  = f'{_mlabel}  {DIM}(in ${IN_COST_PER_M}/1M · out ${OUT_COST_PER_M}/1M){RESET}'
 
     # ── Key metrics ───────────────────────────────────────────────────────────
     comp_ratio   = round(without / inp, 1) if inp > 0 else None
