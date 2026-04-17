@@ -25,29 +25,42 @@ done
 
 # Patch settings.json — remove pith hooks and statusline
 if [ -f "${SETTINGS}" ]; then
-  node - "${SETTINGS}" <<'NODESCRIPT'
+  # Pass the hooks dir explicitly so we only match hook entries whose command
+  # actually references OUR install path. The previous filter just substring-
+  # matched "pith" anywhere in the entry JSON — any unrelated user hook with
+  # "pith" in its path would have been silently deleted.
+  node - "${SETTINGS}" "${HOOKS_DIR}" <<'NODESCRIPT'
 const fs = require('fs');
-const p  = process.argv[2];
-let s = {};
-try { s = JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) {}
+const path = require('path');
+const [,, settingsPath, hooksDir] = process.argv;
 
-// Remove pith hooks from all hook events
+let s = {};
+try { s = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch (_) {}
+
+// Match Pith hook entries by their command path (not by substring).
+const isOurs = (entry) => {
+  if (!entry || !Array.isArray(entry.hooks)) return false;
+  return entry.hooks.some(h =>
+    h && typeof h.command === 'string' && h.command.includes(hooksDir)
+  );
+};
+
 if (s.hooks) {
   for (const event of Object.keys(s.hooks)) {
-    s.hooks[event] = (s.hooks[event] || []).filter(
-      entry => !JSON.stringify(entry).includes('pith')
-    );
+    s.hooks[event] = (s.hooks[event] || []).filter(e => !isOurs(e));
     if (s.hooks[event].length === 0) delete s.hooks[event];
   }
   if (Object.keys(s.hooks).length === 0) delete s.hooks;
 }
 
-// Remove statusline if it's ours
-if (s.statusLine && JSON.stringify(s.statusLine).includes('pith')) {
+// Same check for statusLine: only strip if it's pointing at our bundle.
+if (s.statusLine
+    && typeof s.statusLine.command === 'string'
+    && s.statusLine.command.includes(hooksDir)) {
   delete s.statusLine;
 }
 
-fs.writeFileSync(p, JSON.stringify(s, null, 2));
+fs.writeFileSync(settingsPath, JSON.stringify(s, null, 2));
 console.log('  ✓ settings.json cleaned');
 NODESCRIPT
 fi

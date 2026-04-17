@@ -31,9 +31,16 @@ function readTranscriptTokens(transcriptPath) {
   return { outputTokens, inputTokens: latestInputTokens };
 }
 
+const STDIN_CAP = 1 * 1024 * 1024;
 let raw = '';
-process.stdin.on('data', c => { raw += c; });
+let truncated = false;
+process.stdin.on('data', c => {
+  if (truncated) return;
+  if (raw.length + c.length > STDIN_CAP) { truncated = true; return; }
+  raw += c;
+});
 process.stdin.on('end', () => {
+  if (truncated) { process.exit(0); }
   try {
     const data = JSON.parse(raw);
     const proj = loadProjectState();

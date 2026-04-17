@@ -78,9 +78,18 @@ for (let i = 0; i < argv.length; i++) {
   }
 }
 
+// Prompts larger than 1 MiB are almost certainly garbage or a DoS attempt —
+// normal user prompts are kilobytes.
+const STDIN_CAP = 1 * 1024 * 1024;
 let raw = '';
-process.stdin.on('data', c => { raw += c; });
+let truncated = false;
+process.stdin.on('data', c => {
+  if (truncated) return;
+  if (raw.length + c.length > STDIN_CAP) { truncated = true; return; }
+  raw += c;
+});
 process.stdin.on('end', () => {
+  if (truncated) { process.exit(0); }
   try {
     let data;
     if (slashPrefix) {
@@ -349,6 +358,53 @@ Display this reference any time with: /pith help`
         // /pith reset-cache — force full session-start injection next session
         saveProjectState({ session_injection_hash: null });
         out.push('PITH: session cache cleared. Full rules will be injected on next session start.');
+
+      } else if (arg === 'update') {
+        // /pith update [check|apply|list]
+        //   - check (default): print diff + hash deltas
+        //   - apply: fetch + checkout + re-run install.sh
+        //   - list:  show available tags
+        const sub = (rest || '').toLowerCase().trim().split(/\s+/).filter(Boolean);
+        let mode = sub[0] || 'check';
+        if (!['check', 'apply', 'list'].includes(mode)) {
+          out.push('[PITH: /pith update [check|apply|list]]');
+        } else {
+          out.push(runTool('update.py', [`--${mode}`], root));
+        }
+
+      } else if (arg === 'telemetry') {
+        // /pith telemetry status|purge|verbose <on|off>
+        const sub = (rest || '').toLowerCase().trim().split(/\s+/);
+        const os2 = require('os');
+        const tDir  = path.join(os2.homedir(), '.pith');
+        const tFile = path.join(tDir, 'telemetry.jsonl');
+        const tRotated = tFile + '.1';
+        const statSafe = p => { try { return fs.statSync(p); } catch (_) { return null; } };
+
+        if (sub[0] === 'purge' || sub[0] === 'clear') {
+          let freed = 0;
+          for (const p of [tFile, tRotated]) {
+            const st = statSafe(p);
+            if (st) { freed += st.size; try { fs.unlinkSync(p); } catch (_) {} }
+          }
+          out.push(`PITH TELEMETRY: purged. Freed ${Math.round(freed/1024)} KiB.`);
+        } else {
+          const st  = statSafe(tFile);
+          const st2 = statSafe(tRotated);
+          const verbose = process.env.PITH_TELEMETRY_VERBOSE === '1';
+          out.push(
+            `PITH TELEMETRY\n` +
+            `  Path:        ${tFile}\n` +
+            `  Size:        ${st ? Math.round(st.size / 1024) + ' KiB' : '(empty)'}\n` +
+            `  Rotated:     ${st2 ? Math.round(st2.size / 1024) + ' KiB' : '(none)'}\n` +
+            `  Verbose:     ${verbose ? 'ON (captures first 3 lines per tool call, scrubbed)' : 'OFF (counts only — recommended)'}\n` +
+            `  Scrub:       always on (key=value, Bearer tokens, long hex/base64)\n` +
+            `  Rotation:    automatic at ~10 MiB\n` +
+            `\n` +
+            `  /pith telemetry purge   — delete the log\n` +
+            `  PITH_TELEMETRY_VERBOSE  — set to 1 to enable verbose mode (still scrubbed)`
+          );
+        }
 
       } else if (arg === 'report') {
         // /pith report — generate HTML dashboard and open in browser
