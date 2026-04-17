@@ -36,6 +36,9 @@ def parse_wiki(wiki_dir: Path) -> tuple[list[dict], list[dict]]:
 
     for md_path in md_files:
         rel = md_path.relative_to(wiki_dir)
+        # Skip CLAUDE.md — it's a schema/template file with example [[wikilinks]] that aren't real pages
+        if md_path.name == 'CLAUDE.md':
+            continue
         node_id = str(rel.with_suffix(""))          # e.g. "decisions/auth-choice"
         label = md_path.stem                         # e.g. "auth-choice"
         group = rel.parts[0] if len(rel.parts) > 1 else "root"

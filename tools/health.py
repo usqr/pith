@@ -165,23 +165,24 @@ def main():
     IN_COST_PER_M, OUT_COST_PER_M = get_pricing(model_id)
 
     fill    = inp / limit if limit else 0
-    # Total without Pith = what we consumed + what Pith removed
+    # without = tool-compression baseline (input side only; output baseline added below)
     without = inp + t_saved
-    pct     = round(t_saved / without * 100) if without else 0
+    total_saved = t_saved + out_s
+    full_baseline = without + out_s
+    pct     = round(total_saved / full_baseline * 100) if full_baseline else 0
 
     # Cost calculations
     actual_in_cost  = cost(inp,     IN_COST_PER_M)
     actual_out_cost = cost(out_tok, OUT_COST_PER_M)
     actual_cost     = actual_in_cost + actual_out_cost
 
-    # Savings split by token type:
-    #   Tool compression saves INPUT tokens (results re-read each turn) → $3/1M
-    #   Output mode compression saves OUTPUT tokens → $15/1M (5× more valuable)
-    tool_saved_tokens = t_saved - out_s          # everything except output mode
-    saved_in_cost     = cost(tool_saved_tokens, IN_COST_PER_M)
-    saved_out_cost    = cost(out_s,             OUT_COST_PER_M)
-    saved_cost_val    = saved_in_cost + saved_out_cost
-    would_cost        = actual_cost + saved_cost_val
+    # t_saved (tool compression) and out_s (output mode) are independent buckets —
+    # out_s is NOT a subset of t_saved. Never subtract one from the other.
+    saved_in_cost  = cost(t_saved, IN_COST_PER_M)    # tool savings save input tokens
+    saved_out_cost = cost(out_s,   OUT_COST_PER_M)   # output mode saves output tokens
+    saved_cost_val = saved_in_cost + saved_out_cost
+    would_cost     = actual_cost + saved_cost_val
+    total_saved    = t_saved + out_s
 
     # Threshold color for context bar
     pct_fill = round(fill * 100)
@@ -215,12 +216,12 @@ def main():
     print(flow_chart(inp, out_tok, t_saved, without, limit))
 
     # Key metrics row (only when we have real session data)
-    if t_saved > 0 and inp > 0:
+    if total_saved > 0 and inp > 0:
         print()
         ratio_str = f'{GREEN}{BOLD}{comp_ratio}:1{RESET}' if comp_ratio else '—'
         roi_str   = f'{GREEN}{BOLD}{roi}×{RESET}' if roi else '—'
         print(f'  {DIM}{"Compression ratio":<18}{RESET}{ratio_str}  '
-              f'{DIM}({pct}% fewer tokens — {fmt(t_saved)} saved of {fmt(without)} baseline){RESET}')
+              f'{DIM}({pct}% fewer tokens — {fmt(total_saved)} saved of {fmt(full_baseline)} baseline){RESET}')
         if roi:
             print(f'  {DIM}{"Cost ROI":<18}{RESET}{roi_str}  '
                   f'{DIM}(per $1 spent → ${roi} saved  ·  {fmt_cost(saved_cost_val)} total){RESET}')
@@ -230,7 +231,7 @@ def main():
 
     # ── Savings breakdown ─────────────────────────────────────────────────────
     print()
-    print(f'  {DIM}Savings this session  (without Pith: {fmt(without)} tokens){RESET}')
+    print(f'  {DIM}Savings this session  (without Pith: {fmt(full_baseline)} tokens){RESET}')
     print()
 
     # Output mode savings are estimated relative to actual output tokens, not tool savings.
@@ -260,9 +261,9 @@ def main():
         print()
 
     # Summary line
-    if t_saved > 0:
+    if total_saved > 0:
         print(f'  {GREEN}{BOLD}{"Total saved":<16}{RESET}  '
-              f'{GREEN}{BOLD}{fmt(t_saved)} tokens  ({pct}% of what this session would have used){RESET}')
+              f'{GREEN}{BOLD}{fmt(total_saved)} tokens  ({pct}% of what this session would have used){RESET}')
         print(f'  {DIM}{"Actual used":<16}{RESET}  {fmt(inp)} tokens  '
               f'{DIM}({100 - pct}% of uncompressed baseline){RESET}')
     else:
@@ -279,14 +280,14 @@ def main():
     print(row('Actual spend',  fmt_cost(actual_cost), YELLOW))
     print()
     if saved_in_cost > 0:
-        print(row('  Tool compress',  f'-{fmt(tool_saved_tokens)} tok  {fmt_cost(saved_in_cost)}', DIM))
+        print(row('  Tool compress',  f'-{fmt(t_saved)} tok  {fmt_cost(saved_in_cost)}', DIM))
     if saved_out_cost > 0:
         print(row('  Output mode',    f'-{fmt(out_s)} tok  {fmt_cost(saved_out_cost)}', DIM))
     print(row('Cost saved',    fmt_cost(saved_cost_val), GREEN + BOLD))
     print(row('Without Pith',  fmt_cost(would_cost),  RED))
 
     # ── Lifetime ──────────────────────────────────────────────────────────────
-    lifetime_total = total + t_saved
+    lifetime_total = total + total_saved
     lifetime_cost  = total_cost_saved + saved_cost_val
     # Fallback: cost_saved_total was 0 before stop.js fix (sessions before the patch).
     # If accumulated cost is lower than what token count implies (all input at $3/1M),

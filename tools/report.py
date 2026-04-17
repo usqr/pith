@@ -19,8 +19,23 @@ STATE     = Path.home() / '.pith' / 'state.json'
 TELEMETRY = Path.home() / '.pith' / 'telemetry.jsonl'
 OUTPUT    = Path.home() / '.pith' / 'report.html'
 
-IN_COST_PER_M  = 3.0
-OUT_COST_PER_M = 15.0
+PRICING: dict[str, tuple[float, float]] = {
+    'opus-4-7':   (5.0,  25.0),  'opus-4-6':   (5.0,  25.0),  'opus-4-5':  (5.0,  25.0),
+    'opus-4-1':   (15.0, 75.0),  'opus-4':     (15.0, 75.0),
+    'sonnet-4-6': (3.0,  15.0),  'sonnet-4-5': (3.0,  15.0),  'sonnet-4':  (3.0,  15.0),
+    'sonnet-3-7': (3.0,  15.0),
+    'haiku-4-5':  (1.0,  5.0),   'haiku-3-5':  (0.8,  4.0),
+    'opus-3':     (15.0, 75.0),  'haiku-3':    (0.25, 1.25),
+}
+
+def get_pricing(model: str | None) -> tuple[float, float]:
+    if not model:
+        return (3.0, 15.0)
+    m = model.lower().replace('claude-', '').replace('_', '-')
+    for key in sorted(PRICING, key=len, reverse=True):
+        if key in m:
+            return PRICING[key]
+    return (3.0, 15.0)
 
 
 def load_state() -> dict:
@@ -55,28 +70,34 @@ def load_telemetry(session_start: str) -> list[dict]:
 def generate_html(s: dict, events: list[dict]) -> str:
     inp       = s.get('input_tokens_est', 0)
     out_tok   = s.get('output_tokens_est', 0)
-    t_saved   = s.get('tokens_saved_session', 0)
+    t_saved   = s.get('tokens_saved_session', 0)   # tool compression savings (input tokens)
     toon_s    = s.get('toon_savings_session', 0)
     skel_s    = s.get('skeleton_savings_session', 0)
     bash_s    = s.get('bash_savings_session', 0)
     grep_s    = s.get('grep_savings_session', 0)
     web_s     = s.get('web_savings_session', 0)
     offload_s = s.get('offload_savings_session', 0)
-    out_s     = s.get('output_savings_session', 0)
+    out_s     = s.get('output_savings_session', 0)  # output mode savings (output tokens, tracked separately)
     limit     = s.get('context_limit', 200_000)
     mode      = s.get('mode', 'off')
+    model_id  = s.get('model')
 
-    without   = inp + t_saved
-    pct       = round(t_saved / without * 100) if without else 0
-    fill_pct  = round(inp / limit * 100) if limit else 0
+    IN_COST_PER_M, OUT_COST_PER_M = get_pricing(model_id)
+    model_label = model_id if model_id else 'Sonnet 4.6'
+
+    # Total saved = tool savings + output mode savings (tracked in separate buckets)
+    total_saved = t_saved + out_s
+    without     = inp + t_saved          # baseline input = actual + what tool compression removed
+    pct         = round(total_saved / (without + out_s) * 100) if (without + out_s) else 0
+    fill_pct    = round(inp / limit * 100) if limit else 0
 
     actual_in_cost  = inp     / 1_000_000 * IN_COST_PER_M
     actual_out_cost = out_tok / 1_000_000 * OUT_COST_PER_M
     actual_cost     = actual_in_cost + actual_out_cost
 
-    tool_saved     = t_saved - out_s
-    saved_in_cost  = tool_saved / 1_000_000 * IN_COST_PER_M
-    saved_out_cost = out_s      / 1_000_000 * OUT_COST_PER_M
+    # t_saved and out_s are independent buckets — no subtraction
+    saved_in_cost  = t_saved / 1_000_000 * IN_COST_PER_M
+    saved_out_cost = out_s   / 1_000_000 * OUT_COST_PER_M
     saved_cost     = saved_in_cost + saved_out_cost
     would_cost     = actual_cost + saved_cost
 
@@ -127,7 +148,7 @@ def generate_html(s: dict, events: list[dict]) -> str:
       </div>
       <div class="cost-row">
         <span class="cost-label" style="color:#30d158">Tool compression</span>
-        <span class="cost-tokens" style="color:#30d158">-{fk(tool_saved)}</span>
+        <span class="cost-tokens" style="color:#30d158">-{fk(t_saved)}</span>
         <span class="cost-val" style="color:#30d158">-{fc(saved_in_cost)}</span>
       </div>
       <div class="cost-row">
@@ -451,10 +472,10 @@ nav {{
       Token optimization · Pith for Claude Code
     </div>
     <h1>
-      <span class="h1-a">{fk(t_saved)} tokens saved.</span>
+      <span class="h1-a">{fk(total_saved)} tokens saved.</span>
       <span class="h1-b">{pct}% compression this session.</span>
     </h1>
-    <p class="hero-sub">mode: {mode.upper()} &nbsp;·&nbsp; model: Sonnet 4.6 &nbsp;·&nbsp; {session_date}</p>
+    <p class="hero-sub">mode: {mode.upper()} &nbsp;·&nbsp; model: {model_label} &nbsp;·&nbsp; {session_date}</p>
   </div>
 </section>
 
@@ -469,8 +490,8 @@ nav {{
   </div>
   <div class="stat">
     <div class="stat-eye">Tokens saved</div>
-    <div class="stat-n" style="color:var(--emerald)">{fk(t_saved)}</div>
-    <div class="stat-l">of {fk(without)} token baseline</div>
+    <div class="stat-n" style="color:var(--emerald)">{fk(total_saved)}</div>
+    <div class="stat-l">of {fk(without + out_s)} token baseline</div>
   </div>
   <div class="stat">
     <div class="stat-eye">Cost ROI</div>
@@ -502,9 +523,9 @@ nav {{
       <div class="flow-row">
         <div class="flow-header">
           <span class="flow-name" style="color:var(--violet)">Pith intercepted &amp; removed</span>
-          <span class="flow-val" style="color:var(--violet)">-{fk(t_saved)}</span>
+          <span class="flow-val" style="color:var(--violet)">-{fk(total_saved)}</span>
         </div>
-        <div class="flow-track"><div class="flow-fill" style="width:{pct_bar(t_saved, without)};background:var(--violet)"></div></div>
+        <div class="flow-track"><div class="flow-fill" style="width:{pct_bar(total_saved, without + out_s)};background:var(--violet)"></div></div>
         <div class="flow-sub">{pct}% of baseline removed before reaching context</div>
       </div>
       <div class="flow-row">
@@ -652,7 +673,7 @@ new Chart(document.getElementById('bar'), {{
   data: {{
     labels: ['Input', 'Output', 'Saved'],
     datasets: [{{
-      data: [{inp}, {out_tok}, {t_saved}],
+      data: [{inp}, {out_tok}, {total_saved}],
       backgroundColor: [BLUE, AMBER, GREEN],
       borderRadius: 6,
       borderWidth: 0,
