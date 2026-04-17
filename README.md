@@ -88,7 +88,7 @@ One command. Hooks install globally into `~/.claude/hooks/`. Every session from 
 /pith report    → interactive HTML dashboard (~/.pith/report.html) — auto-refreshes every 30s
 ```
 
-![/pith status — token flow chart, compression ratio, cost breakdown](assets/status-screenshot-v1.1.png)
+![/pith status — token flow chart, compression ratio, cost breakdown](assets/status-screenshot-v1.2.png)
 
 **Output compression** (on demand or automatic)
 ```
@@ -227,10 +227,11 @@ After Pith:   errors + summary      →    80 tokens   (−91%)
 ```
 
 Session report from a real coding session:
-- 105.6k input tokens (would be ~112.6k without Pith)
-- 65.8k output tokens
-- $1.30 actual spend vs $2.39 without
-- Compression ratio: 1.1:1 tool compression + 88.8k output mode savings
+- 19.9k input tokens (237.9k baseline without Pith)
+- 218.0k tokens saved — 92% compression ratio
+- Cost ROI: **47.2×** (per $1 spent → $47.2 saved)
+- $0.07 actual spend vs $3.33 without Pith
+- Output mode (ULTRA) driving 100% of savings
 
 Token savings come from two independent buckets:
 - **Tool compression** (`PostToolUse`) — trims file reads, bash, grep
