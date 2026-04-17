@@ -141,6 +141,60 @@ Already installed? `/pith update` runs `git pull` on `~/.local/share/pith` and r
 
 ---
 
+## jCodeMunch — structure-aware code ingestion
+
+When you ingest a source code file (`.py`, `.ts`, `.js`, `.go`, `.rs`, `.java`, etc.), Pith takes a different path than it does for docs or notes.
+
+**Normal ingest** (markdown, text): feeds raw content → extracts entities, concepts, decisions.
+
+**jCodeMunch** (code files): feeds skeleton → extracts architecture.
+
+```
+/pith ingest src/services/auth.ts
+→ [jCodeMunch] Code file detected (ts) — using structure-aware analysis...
+```
+
+### What it does
+
+1. Runs `symbols.py` on the file — extracts imports, function/class signatures, types. No body.
+2. Passes the skeleton (not raw source) + first 120 lines to Claude for analysis.
+3. Creates **Module** and **Class** wiki pages, not generic Concept pages.
+
+```
+wiki/entities/
+  AuthService.md      ← exports, dependencies, key methods
+  TokenValidator.md   ← class: methods, relationships, contracts
+```
+
+### Why it matters
+
+| Regular ingest | jCodeMunch |
+|---------------|------------|
+| Feeds full file source | Feeds AST skeleton only |
+| Creates generic Concept pages | Creates Module/Class pages |
+| Tracks claims and facts | Tracks exports, methods, deps |
+| ~4000 token budget | ~500 token skeleton → cheaper |
+
+The wiki stays current with your architecture, not just your docs.
+Cross-links (`[[AuthService]]` → `[[TokenValidator]]`) appear automatically in `/pith-graph`.
+
+### What you can do with it
+
+```bash
+# Map a whole service layer
+/pith ingest src/services/auth.ts
+/pith ingest src/services/user.ts
+/pith ingest src/services/payments.ts
+
+# Then query across them
+/pith wiki "which services depend on the token validator?"
+/pith-graph   → visual dep map in browser
+```
+
+**Brownfield bootstrap:** run ingest on your key files once, get a navigable wiki of module responsibilities, exports, and cross-module deps — in one session.
+
+---
+
 ## Multi-model pricing
 
 Pith detects the model from the conversation transcript and applies correct per-token rates automatically. No config needed.

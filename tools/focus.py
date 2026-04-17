@@ -112,12 +112,18 @@ def focus(filepath: Path, question: str, top_k: int = 5) -> str:
 
 
 def main():
+    import os
     p = argparse.ArgumentParser()
     p.add_argument('filepath')
     p.add_argument('--question', '-q', default='')
     p.add_argument('--top', '-k', type=int, default=5)
     args = p.parse_args()
-    print(focus(Path(args.filepath).resolve(), args.question, args.top))
+    filepath = Path(args.filepath).resolve()
+    cwd = Path(os.environ.get('CLAUDE_CWD') or os.getcwd()).resolve()
+    if not str(filepath).startswith(str(cwd)):
+        print(f"[PITH FOCUS: access denied — {filepath.name} is outside the project directory]")
+        sys.exit(1)
+    print(focus(filepath, args.question, args.top))
 
 if __name__ == '__main__':
     main()
