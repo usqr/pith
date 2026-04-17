@@ -669,7 +669,7 @@
     </h1>
 
     <p class="hero-sub r on d2">
-      40–70% token reduction, automatic. Auto-escalation. Hindsight pruning. Symbol extraction. Project wiki. Interactive knowledge graph. Install once — every project, forever.
+      ~50% fewer tokens in a typical Claude Code session. Zero config. Install once — every project, forever.
     </p>
 
     <div class="hero-badges r on d2">
@@ -723,8 +723,42 @@
 <!-- ━━━━━━━━━━━━━━━━━━━━ TWO LAYERS ━━━━━━━━━━━━━━━━━━━━ -->
 <div class="s r" id="layers">
   <div class="s-eye">Architecture</div>
-  <h2 class="s-h">Two layers.<br>One always on.</h2>
-  <p class="s-p">Pith runs as two independent layers. The infrastructure layer is permanent — it activates on install and never turns off. The style compression layer is togglable — switch it on, off, or change modes mid-session without affecting anything else.</p>
+  <h2 class="s-h">Four hooks.<br>One install.</h2>
+  <p class="s-p">Pith intercepts Claude Code's session lifecycle at four points. Everything runs automatically — no config, no commands required.</p>
+
+  <div class="term r" style="margin-top:32px;margin-bottom:40px">
+    <div class="term-chrome">
+      <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+      <span class="term-name">session lifecycle</span>
+    </div>
+    <div class="term-body" style="font-size:12px;line-height:1.8">
+      <div><span class="t-violet">┌─────────────────────────────────────────────────────┐</span></div>
+      <div><span class="t-violet">│</span>              <span class="t-out">Claude Code Session</span>                        <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>                                                     <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>  <span class="t-emerald">[SessionStart]</span> <span class="t-dim">──► inject rules, restore mode, cache-lock</span>  <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>                                                     <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>  User sends prompt                                   <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>       <span class="t-dim">│</span>                                               <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>  <span class="t-emerald">[UserPromptSubmit]</span> <span class="t-dim">──► parse /pith commands, context</span>   <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>       <span class="t-dim">│</span>                                               <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>  Claude thinks + calls tools                         <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>       <span class="t-dim">│</span>                                               <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>  <span class="t-emerald">[PostToolUse]</span> <span class="t-dim">──► compress tool output</span>               <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>  <span class="t-dim">  • File reads   → skeleton (imports + signatures)</span>   <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>  <span class="t-dim">  • Bash output  → errors + 3-line summary            </span><span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>  <span class="t-dim">  • Grep results → capped at 25 matches               </span><span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>  <span class="t-dim">  • Large output → offloaded, 3-line pointer          </span><span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>       <span class="t-dim">│</span>                                               <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>  Claude responds                                     <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>       <span class="t-dim">│</span>                                               <span class="t-violet">│</span></div>
+      <div><span class="t-violet">│</span>  <span class="t-emerald">[Stop]</span> <span class="t-dim">──► record token usage, accumulate lifetime stats</span> <span class="t-violet">│</span></div>
+      <div><span class="t-violet">└─────────────────────────────────────────────────────┘</span></div>
+    </div>
+  </div>
+
+  <p class="s-p" style="margin-top:0">The PostToolUse hook is where most savings happen — file reads alone account for 30–50% of context in a typical coding session. It runs on every tool call, silently, without interrupting your flow.</p>
+
+  <p class="s-p">Pith also runs as two independent layers. The infrastructure layer is permanent — it activates on install and never turns off. The style compression layer is togglable — switch it on, off, or change modes mid-session without affecting anything else.</p>
 
   <div class="ba" style="margin-top:48px">
     <div class="ba-card" style="border-color:rgba(10,132,255,0.15)">
