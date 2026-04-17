@@ -1,5 +1,7 @@
 # Pith
 
+[![GitHub Stars](https://img.shields.io/github/stars/abhisekjha/pith?style=social)](https://github.com/abhisekjha/pith/stargazers)
+
 **~50% fewer tokens in a typical Claude Code session. Zero config. Install once.**
 
 ```bash
@@ -223,6 +225,12 @@ Three arms: **baseline / terse / pith**. Honest delta is pith vs terse — how m
 ```
 
 Removes hooks from `~/.claude/settings.json`. History preserved at `~/.pith/`.
+
+---
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=abhisekjha/pith&type=Date)](https://star-history.com/#abhisekjha/pith&Date)
 
 ---
 
