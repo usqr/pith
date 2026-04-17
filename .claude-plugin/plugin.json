@@ -1,6 +1,6 @@
 {
   "name": "pith",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Token optimization for Claude Code. Automatic tool output compression (40-60% reduction), token meter in statusline, auto-compact at 70% context, structured output formats, self-building project wiki, URL ingestion, Karpathy compile pass, and semantic lint.",
   "author": {
     "name": "Abhisek Jha",
