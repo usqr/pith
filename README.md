@@ -3,7 +3,7 @@
 **~50% fewer tokens in a typical Claude Code session. Zero config. Install once.**
 
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/abhisekjha/pith/main/install.sh)
+bash <(curl -s https://raw.githubusercontent.com/usqr/pith/main/install.sh)
 ```
 
 ---
@@ -60,12 +60,12 @@ In a 30-turn coding session: tool compression + auto-compact alone cuts spend by
 ## Install
 
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/abhisekjha/pith/main/install.sh)
+bash <(curl -s https://raw.githubusercontent.com/usqr/pith/main/install.sh)
 ```
 
 Or from source:
 ```bash
-git clone https://github.com/abhisekjha/pith
+git clone https://github.com/usqr/pith
 bash pith/install.sh
 ```
 
