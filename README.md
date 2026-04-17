@@ -138,8 +138,14 @@ Uses tree-sitter AST when available, regex fallback otherwise. Supports Python, 
 ```
 /pith wiki "why did we choose Redis?"   → search the project wiki
 /pith ingest raw/sources/article.md    → add source, update wiki pages (jCodeMunch for code)
-/pith wiki                              → toggle wiki mode on/off
-/pith lint                              → semantic contradiction detection, orphan pages
+/pith ingest --url https://...         → fetch URL, save to raw/sources/, ingest
+/pith compile                          → batch re-synthesis from all sources
+/pith compile --topic "auth"           → recompile pages for one topic only
+/pith compile --dry-run                → show compile plan, write nothing
+/pith wiki                             → toggle wiki mode on/off
+/pith lint                             → semantic checks: contradictions, gaps, missing pages
+/pith lint --fix                       → same + auto-create stubs for missing entities
+/pith lint --quick                     → structural checks only, no LLM
 ```
 
 ---
@@ -292,7 +298,13 @@ uv run python benchmarks/run.py [--dry-run]
 | `/pith wiki` | Toggle wiki mode on/off |
 | `/pith wiki "<question>"` | Query the project wiki |
 | `/pith ingest <file>` | Add source to wiki (jCodeMunch for code files) |
-| `/pith lint` | Semantic contradiction detection, orphan pages |
+| `/pith ingest --url <url>` | Fetch URL and ingest (saves to `raw/sources/`) |
+| `/pith compile` | Batch re-synthesis from all sources (Karpathy compile pass) |
+| `/pith compile --topic <topic>` | Recompile pages matching topic |
+| `/pith compile --dry-run` | Show compile plan without writing |
+| `/pith lint` | Full semantic lint: contradictions, gaps, missing pages, imputable facts |
+| `/pith lint --fix` | Lint + auto-create stubs for missing entity pages |
+| `/pith lint --quick` | Structural checks only (no LLM call) |
 | `/pith-graph` | Generate force-directed wiki knowledge graph |
 
 ### Integrations

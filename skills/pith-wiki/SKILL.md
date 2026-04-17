@@ -152,26 +152,47 @@ Issues found: [N orphan pages, M stale claims, K missing cross-refs]
 ## Ingest workflow
 
 When `/pith ingest <file>` is called:
+1. Run `python3 tools/ingest.py <file>`
 
-1. Read the source file
-2. Extract: key entities, key claims, contradictions with existing wiki content, gaps filled
-3. Show summary: "Found: 3 entities, 2 new concepts, 1 contradiction. Will update: [[page1]], [[page2]]. Create: [[new-page]]."
-4. Wait for user confirmation
-5. Write/update pages, update index.md, append to log.md
+When `/pith ingest --url <url>` is called:
+1. Run `python3 tools/ingest.py --url <url>`
+   - Fetches URL, strips HTML, saves to `raw/sources/YYYY-MM-DD-slug.md`
+   - Then runs same ingest pipeline as a local file
+
+---
+
+## Compile workflow
+
+When `/pith compile` is called:
+1. Run `python3 tools/compile.py`
+   - Reads all files in `raw/sources/`
+   - Asks Claude to identify cross-source topics and synthesis opportunities
+   - Creates/updates `wiki/concepts/` pages with multi-source evidence
+   - Files gaps back to wiki log
+
+When `/pith compile --topic <topic>` is called:
+1. Run `python3 tools/compile.py --topic "<topic>"`
+
+When `/pith compile --dry-run` is called:
+1. Run `python3 tools/compile.py --dry-run`
+   - Shows plan (topics, synthesis pages, gaps) without writing anything
 
 ---
 
 ## Lint checks
 
-When `/pith lint` is called, check for:
-- Orphan pages (no inbound links from index.md or other pages)
-- Pages with no sources
-- Claims that contradict each other across pages (flag for review)
-- Entities mentioned in source summaries but lacking their own page
-- index.md entries pointing to non-existent files
-- log.md entries older than 30 days with "unresolved" contradictions
+When `/pith lint` is called:
+1. Run `python3 tools/lint.py`
+   - Structural: orphan pages, missing sources, broken index links, stale contradictions
+   - Semantic (LLM): cross-page contradictions, missing entity pages, suggested connections, knowledge gaps, imputable facts
 
-Report as a numbered list with recommended action per issue.
+When `/pith lint --fix` is called:
+1. Run `python3 tools/lint.py --fix`
+   - Same as above + auto-creates stub pages for missing entities
+
+When `/pith lint --quick` is called:
+1. Run `python3 tools/lint.py --quick`
+   - Structural checks only, no LLM call
 
 ---
 

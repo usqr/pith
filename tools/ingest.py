@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """
-Pith Ingest — add a source document to the project wiki.
+Pith Ingest — add a source document or URL to the project wiki.
 Extracts entities, claims, contradictions, and updates wiki pages.
 
 Usage:
     python3 ingest.py <filepath>
     python3 ingest.py raw/sources/article.md
+    python3 ingest.py --url https://example.com/article
 """
 from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
+import urllib.request
+import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -389,11 +393,75 @@ Writing pages...""")
             pass
 
 
+def _html_to_text(html: str) -> str:
+    """Strip HTML tags and decode entities to plain text."""
+    text = re.sub(r'<script[^>]*>[\s\S]*?</script>', '', html, flags=re.IGNORECASE)
+    text = re.sub(r'<style[^>]*>[\s\S]*?</style>', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'<[^>]+>', ' ', text)
+    text = re.sub(r'&nbsp;', ' ', text)
+    text = re.sub(r'&amp;', '&', text)
+    text = re.sub(r'&lt;', '<', text)
+    text = re.sub(r'&gt;', '>', text)
+    text = re.sub(r'&quot;', '"', text)
+    text = re.sub(r'&#?\w+;', '', text)
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text.strip()
+
+
+def fetch_url(url: str) -> Path:
+    """Fetch URL, save as markdown in raw/sources/, return path."""
+    cwd = Path.cwd()
+    sources_dir = cwd / 'raw' / 'sources'
+    sources_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f'Fetching {url} ...')
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (compatible; pith-ingest/1.0)'})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            raw = resp.read()
+            content_type = resp.headers.get('Content-Type', '')
+    except urllib.error.URLError as e:
+        raise RuntimeError(f'Fetch failed: {e}')
+
+    encoding = 'utf-8'
+    m = re.search(r'charset=([^\s;]+)', content_type)
+    if m:
+        encoding = m.group(1).strip()
+
+    text = raw.decode(encoding, errors='replace')
+
+    if 'html' in content_type.lower():
+        # Extract title
+        title_m = re.search(r'<title[^>]*>(.*?)</title>', text, re.IGNORECASE | re.DOTALL)
+        title = title_m.group(1).strip() if title_m else url
+        title = re.sub(r'<[^>]+>', '', title).strip()
+        text = _html_to_text(text)
+        content = f'# {title}\n\nSource: {url}\nFetched: {datetime.now(timezone.utc).strftime("%Y-%m-%d")}\n\n{text}'
+    else:
+        title = url.rstrip('/').split('/')[-1] or 'fetched'
+        content = text
+
+    slug = re.sub(r'[^a-z0-9]+', '-', title.lower())[:60].strip('-')
+    now = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    out_path = sources_dir / f'{now}-{slug}.md'
+    out_path.write_text(content, encoding='utf-8')
+    print(f'Saved → {out_path.relative_to(cwd)}')
+    return out_path
+
+
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('filepath')
+    p.add_argument('filepath', nargs='?', help='Local file to ingest')
+    p.add_argument('--url', help='URL to fetch and ingest')
     args = p.parse_args()
-    ingest(Path(args.filepath).resolve())
+
+    if args.url:
+        path = fetch_url(args.url)
+        ingest(path)
+    elif args.filepath:
+        ingest(Path(args.filepath).resolve())
+    else:
+        p.error('Provide a filepath or --url')
 
 if __name__ == '__main__':
     main()

@@ -1072,7 +1072,7 @@
     <div class="wf-step">
       <div class="wf-num">01</div>
       <h4>Ingest a source</h4>
-      <p>/pith ingest &lt;file&gt;<br>Pith reads and extracts entities, claims, contradictions</p>
+      <p>/pith ingest &lt;file&gt; or --url &lt;url&gt;<br>Extracts entities, claims, contradictions from files or fetched URLs</p>
     </div>
     <div class="wf-step">
       <div class="wf-num">02</div>
@@ -1086,13 +1086,18 @@
     </div>
     <div class="wf-step">
       <div class="wf-num">04</div>
+      <h4>Compile</h4>
+      <p>/pith compile re-synthesizes all sources into cross-linked wiki pages — one command after N ingests</p>
+    </div>
+    <div class="wf-step">
+      <div class="wf-num">05</div>
       <h4>Query anytime</h4>
       <p>/pith wiki "&lt;question&gt;"<br>Synthesizes answer with citations</p>
     </div>
     <div class="wf-step">
-      <div class="wf-num">05</div>
+      <div class="wf-num">06</div>
       <h4>Lint regularly</h4>
-      <p>/pith lint finds orphans, stale claims, and semantic contradictions</p>
+      <p>/pith lint finds contradictions, gaps, missing pages, and imputable facts</p>
     </div>
   </div>
 
@@ -1102,17 +1107,74 @@
       <span class="term-name">pith wiki</span>
     </div>
     <div class="term-body">
-      <div><span class="t-prompt">$</span> <span class="t-cmd">/pith ingest docs/auth-spec.md</span></div>
+      <div><span class="t-prompt">$</span> <span class="t-cmd">/pith ingest --url https://research.example.com/auth-patterns</span></div>
+      <div><span class="t-ok">→</span> <span class="t-out">Fetched → <span class="t-hl">raw/sources/2026-04-17-auth-patterns.md</span></span></div>
       <div><span class="t-ok">→</span> <span class="t-out">Found: <span class="t-hl">3 entities</span>, <span class="t-emerald">2 new concepts</span>, <span class="t-pink">1 contradiction</span></span></div>
       <div>&nbsp;&nbsp;<span class="t-out">Will update: <span class="t-hl">[[auth-middleware]]</span>, <span class="t-hl">[[session-tokens]]</span></span></div>
       <div>&nbsp;&nbsp;<span class="t-out">Will create: <span class="t-emerald">[[JWT-refresh-flow]]</span></span></div>
-      <div>&nbsp;&nbsp;<span class="t-out">Contradiction: "httpOnly cookie" vs "localStorage" — needs resolution</span></div>
-      <div><span class="t-ok">?</span> <span class="t-out">Confirm? [y/n]</span></div>
+      <br>
+      <div><span class="t-prompt">$</span> <span class="t-cmd">/pith compile</span></div>
+      <div><span class="t-ok">→</span> <span class="t-out">Found <span class="t-hl">8 sources</span>. Building compile plan...</span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Topics: <span class="t-hl">5</span> · Synthesis pages: <span class="t-emerald">3</span> · Gaps: <span class="t-pink">2</span></span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Creating <span class="t-emerald">[[auth-strategy-synthesis]]</span> from 3 sources...</span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Compile complete. 3 created · 2 updated.</span></div>
       <br>
       <div><span class="t-prompt">$</span> <span class="t-cmd">/pith wiki "how does auth work?"</span></div>
-      <div><span class="t-ok">→</span> <span class="t-out">Based on <span class="t-hl">[[auth-middleware]]</span> and <span class="t-hl">[[JWT-refresh-flow]]</span>:</span></div>
+      <div><span class="t-ok">→</span> <span class="t-out">Based on <span class="t-hl">[[auth-middleware]]</span> and <span class="t-hl">[[auth-strategy-synthesis]]</span>:</span></div>
       <div>&nbsp;&nbsp;<span class="t-out">Auth: JWT + refresh tokens, httpOnly cookie. Decision: cookies &gt; localStorage (XSS).</span></div>
-      <div>&nbsp;&nbsp;<span class="t-out">Middleware: <span class="t-hl">src/middleware/auth.ts</span>. Adopted 2024-11.</span></div>
+    </div>
+  </div>
+</div>
+
+<hr class="hr" />
+
+<!-- ━━━━━━━━━━━━━━━━━━━━ COMPILE ━━━━━━━━━━━━━━━━━━━━ -->
+<div class="s r" id="compile">
+  <div class="s-eye blue">Compile Pass</div>
+  <h2 class="s-h">Many sources.<br>One coherent wiki.</h2>
+  <p class="s-p">After ingesting several sources, <code style="font-family:var(--mono);font-size:15px;color:rgba(255,255,255,0.7)">/pith compile</code> re-reads all of them together and synthesizes cross-source wiki pages — evidence from multiple documents combined into a single, cited, cross-linked page. This is the Karpathy compile pass: raw/ in, wiki/ out.</p>
+
+  <div class="workflow r">
+    <div class="wf-step">
+      <div class="wf-num">01</div>
+      <h4>Plan</h4>
+      <p>Claude reads all raw/sources/ and identifies cross-cutting topics, synthesis opportunities, and gaps</p>
+    </div>
+    <div class="wf-step">
+      <div class="wf-num">02</div>
+      <h4>Synthesize</h4>
+      <p>Creates or updates wiki/concepts/ pages — each one cites every source it draws from</p>
+    </div>
+    <div class="wf-step">
+      <div class="wf-num">03</div>
+      <h4>File gaps</h4>
+      <p>Topics implied by sources but not yet covered are recorded in log.md for follow-up</p>
+    </div>
+    <div class="wf-step">
+      <div class="wf-num">04</div>
+      <h4>Dry run</h4>
+      <p>/pith compile --dry-run shows the full plan — topics, pages, gaps — without writing anything</p>
+    </div>
+  </div>
+
+  <div class="term r">
+    <div class="term-chrome">
+      <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+      <span class="term-name">pith compile</span>
+    </div>
+    <div class="term-body">
+      <div><span class="t-prompt">$</span> <span class="t-cmd">/pith compile --dry-run</span></div>
+      <div><span class="t-ok">→</span> <span class="t-out">Found <span class="t-hl">8 sources</span>. Building compile plan...</span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Topics to process: <span class="t-hl">5</span></span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Synthesis pages: <span class="t-emerald">[[auth-strategy-synthesis]]</span>, <span class="t-emerald">[[rate-limit-patterns]]</span>, <span class="t-emerald">[[infra-evolution]]</span></span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Gaps: <span class="t-pink">WebSocket auth</span> (referenced in 3 sources, no page) · <span class="t-pink">token rotation</span></span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">[dry-run] No files written.</span></div>
+      <br>
+      <div><span class="t-prompt">$</span> <span class="t-cmd">/pith compile</span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Creating <span class="t-emerald">[[auth-strategy-synthesis]]</span> from 3 sources... ✓</span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Creating <span class="t-emerald">[[rate-limit-patterns]]</span> from 2 sources... ✓</span></div>
+      <div>&nbsp;&nbsp;<span class="t-out">Updating <span class="t-hl">[[infra-decisions]]</span> with new evidence... ✓</span></div>
+      <div><span class="t-ok">✓</span> <span class="t-out">Compile complete. <span class="t-emerald">3 created</span> · <span class="t-hl">2 updated</span> · <span class="t-pink">2 gaps filed</span></span></div>
     </div>
   </div>
 </div>
@@ -1220,7 +1282,7 @@
 <div class="s r">
   <div class="s-eye pink">Semantic Lint</div>
   <h2 class="s-h">Contradictions surface<br>automatically.</h2>
-  <p class="s-p"><code style="font-family:var(--mono);font-size:15px;color:rgba(255,255,255,0.7)">/pith lint</code> goes beyond broken links. It performs semantic clash detection — if a new ingest says "migrating to AWS" and an existing page says "strictly GCP", lint flags it and asks you which is the new source of truth.</p>
+  <p class="s-p"><code style="font-family:var(--mono);font-size:15px;color:rgba(255,255,255,0.7)">/pith lint</code> goes beyond broken links. Structural checks run instantly. The LLM pass finds semantic contradictions, missing entity pages, unlinked related pages, knowledge gaps, and facts that can be inferred from the wiki but aren't stated yet. <code style="font-family:var(--mono);font-size:13px;color:rgba(255,255,255,0.5)">--fix</code> auto-creates stub pages. <code style="font-family:var(--mono);font-size:13px;color:rgba(255,255,255,0.5)">--quick</code> skips the LLM.</p>
 
   <div class="lint-demo r">
     <div class="lint-row">
@@ -1250,10 +1312,34 @@
     <div class="lint-row">
       <span class="lint-icon">🔵</span>
       <div class="lint-body">
-        <div class="lint-title">index.md pointer to missing file</div>
-        <div class="lint-desc">index.md references <strong>[[redis-caching]]</strong> but no file exists at <code style="font-family:var(--mono);font-size:11px">wiki/concepts/redis-caching.md</code></div>
+        <div class="lint-title">Missing entity page — referenced 4×</div>
+        <div class="lint-desc"><strong>Redis</strong> is mentioned in [[caching-strategy]], [[session-tokens]], [[infra-decisions]], and [[q2-migration]] but has no dedicated page. Run with <code style="font-family:var(--mono);font-size:11px">--fix</code> to create stub.</div>
       </div>
       <span class="lint-action la-fix">Missing</span>
+    </div>
+    <div class="lint-row">
+      <span class="lint-icon">🔵</span>
+      <div class="lint-body">
+        <div class="lint-title">Suggested connection — unlinked related pages</div>
+        <div class="lint-desc"><strong>[[rate-limiting]]</strong> and <strong>[[auth-middleware]]</strong> both discuss token expiry but don't cross-link. Add <code style="font-family:var(--mono);font-size:11px">[[rate-limiting]]</code> to auth-middleware's Related section.</div>
+      </div>
+      <span class="lint-action la-fix">Unlinked</span>
+    </div>
+    <div class="lint-row">
+      <span class="lint-icon">🟠</span>
+      <div class="lint-body">
+        <div class="lint-title">Knowledge gap — thin coverage</div>
+        <div class="lint-desc"><strong>WebSocket auth</strong> is referenced in 3 pages but no concept page exists. Heavy cross-reference with no dedicated coverage.</div>
+      </div>
+      <span class="lint-action la-warn">Gap</span>
+    </div>
+    <div class="lint-row">
+      <span class="lint-icon">💡</span>
+      <div class="lint-body">
+        <div class="lint-title">Imputable fact — derivable from wiki</div>
+        <div class="lint-desc"><strong>[[session-tokens]]</strong> is missing: "token lifetime is 15 min" — this follows directly from [[auth-middleware]] + [[rate-limiting]] and should be stated explicitly.</div>
+      </div>
+      <span class="lint-action la-ok">Infer</span>
     </div>
     <div class="lint-row">
       <span class="lint-icon">🟢</span>
