@@ -128,7 +128,33 @@ Auto-escalation ratchets compression as context fills:
 /pith commit    feat(auth): add token refresh on 401
 ```
 
+**Update**
+```
+/pith update    → pull latest Pith version and re-sync all hooks
+```
+
+Already installed? `/pith update` runs `git pull` on `~/.local/share/pith` and re-runs `install.sh` — hooks, slash commands, and settings all re-sync in one step.
+
 → Full command reference: [COMMANDS.md](COMMANDS.md)
+
+---
+
+## Multi-model pricing
+
+Pith detects the model from the conversation transcript and applies correct per-token rates automatically. No config needed.
+
+| Model | Input ($/MTok) | Output ($/MTok) |
+|-------|---------------|----------------|
+| Claude Opus 4.7 / 4.6 / 4.5 | $5.00 | $25.00 |
+| Claude Opus 4.1 / 4 | $15.00 | $75.00 |
+| Claude Sonnet 4.6 / 4.5 / 4 | $3.00 | $15.00 |
+| Claude Sonnet 3.7 | $3.00 | $15.00 |
+| Claude Haiku 4.5 | $1.00 | $5.00 |
+| Claude Haiku 3.5 | $0.80 | $4.00 |
+| Claude Opus 3 | $15.00 | $75.00 |
+| Claude Haiku 3 | $0.25 | $1.25 |
+
+Falls back to Sonnet 4.6 rates if model can't be determined.
 
 ---
 
@@ -149,6 +175,12 @@ Session report from a real coding session:
 - 65.8k output tokens
 - $1.30 actual spend vs $2.39 without
 - Compression ratio: 1.1:1 tool compression + 88.8k output mode savings
+
+Token savings come from two independent buckets:
+- **Tool compression** (`PostToolUse`) — trims file reads, bash, grep
+- **Output mode** (`/pith lean/ultra`) — trims Claude's responses
+
+Both are tracked separately; `total_saved = tool_saved + output_saved`.
 
 ---
 

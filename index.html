@@ -1565,6 +1565,16 @@
       <h3>Speculative Fetch + Session Report <span style="font-size:10px;font-weight:400;opacity:0.5;margin-left:4px">Phase 10 · 2026</span></h3>
       <p>When <code style="font-family:var(--mono);font-size:11px">/pith symbol</code> extracts a function, it automatically scans the body for calls to other functions defined in the same file and appends their signatures — eliminating a follow-up round-trip in ~60% of lookups. Pairs with <code style="font-family:var(--mono);font-size:11px">/pith report</code>, which generates a standalone HTML dashboard (Chart.js) showing token flow, per-bucket savings, cost breakdown, and a compression event timeline.</p>
     </div>
+    <div class="feat">
+      <div class="feat-n">20</div>
+      <h3>Multi-model pricing</h3>
+      <p>Cost estimates auto-detect your model from the transcript — Opus 4.x, Sonnet 4.x, Haiku 4.x, and prior generations. Correct $/MTok rates applied per session automatically. No config needed. Falls back to Sonnet 4.6 rates if model ID is unavailable.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">21</div>
+      <h3>Self-updating</h3>
+      <p>Already installed? <code style="font-family:var(--mono);font-size:11px">/pith update</code> pulls the latest version and re-syncs all hooks, slash commands, and settings in one step. No manual reinstall or curl-pipe needed for existing users.</p>
+    </div>
   </div>
 </div>
 
@@ -1753,10 +1763,15 @@
     </div>
 
     <div class="cmd-grid" style="margin-top:2px">
-      <div class="cmd-group-label">Install &amp; uninstall</div>
+      <div class="cmd-group-label">Install, update &amp; uninstall</div>
       <div class="cmd">
         <span class="cmd-k"><span class="hl">/pith install</span></span>
         <span class="cmd-v">Install Pith into Claude Code — copies hooks, patches settings.json, registers slash commands</span>
+        <span class="cmd-new">New</span>
+      </div>
+      <div class="cmd">
+        <span class="cmd-k"><span class="hl">/pith update</span></span>
+        <span class="cmd-v">Pull latest Pith version and re-sync all hooks, commands, and settings — for existing installs</span>
         <span class="cmd-new">New</span>
       </div>
       <div class="cmd">
