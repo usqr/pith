@@ -15,14 +15,44 @@ const fs   = require('fs');
 const path = require('path');
 const { loadConfig, loadProjectState, saveProjectState } = require('./config');
 
+// ── scrubSecrets ─────────────────────────────────────────────────────────────
+// Best-effort redaction for telemetry: catches the common shapes that leak
+// when someone opens a .env, runs `env`, prints AWS creds, etc. Not a
+// cryptographic guarantee — pair with PITH_TELEMETRY_VERBOSE=0 (default) for
+// the strongest protection.
+function scrubSecrets(s) {
+  if (typeof s !== 'string' || !s) return s;
+  // key=value / key: value where the key is a known secret name
+  s = s.replace(
+    /\b(password|passwd|secret|token|api[_-]?key|apikey|access[_-]?key|bearer|session[_-]?id|aws_[a-z_]+)\s*[:=]\s*\S+/gi,
+    '$1=***REDACTED***'
+  );
+  // Authorization: Bearer / Basic tokens
+  s = s.replace(/\b(authorization|auth)\s*[:=]\s*(bearer|basic)\s+\S+/gi, '$1=$2 ***REDACTED***');
+  // Obvious long hex / base64 blobs (≥32 chars). Heuristic; may over-match.
+  s = s.replace(/\b[A-Fa-f0-9]{32,}\b/g, '***REDACTED-HEX***');
+  s = s.replace(/\b[A-Za-z0-9+/]{40,}={0,2}\b/g, '***REDACTED-B64***');
+  return s;
+}
+
 const config = loadConfig();
 if (!config.tool_compress) process.exit(0);
 
 const THRESHOLD = config.tool_compress_threshold || 30;
 
+// Stdin cap: file-read tool responses can be multi-megabyte, so this limit is
+// generous. It's a belt-and-braces check in case the host passes something
+// pathological; normal Claude Code traffic is far below this.
+const STDIN_CAP = 32 * 1024 * 1024;
 let raw = '';
-process.stdin.on('data', c => { raw += c; });
+let truncated = false;
+process.stdin.on('data', c => {
+  if (truncated) return;
+  if (raw.length + c.length > STDIN_CAP) { truncated = true; return; }
+  raw += c;
+});
 process.stdin.on('end', () => {
+  if (truncated) { process.exit(0); }
   try {
     const data = JSON.parse(raw);
     const toolName = (data.tool_name || data.toolName || '').replace('Tool', '');
@@ -134,26 +164,45 @@ process.stdin.on('end', () => {
       saveProjectState(updates);
 
       // ── Telemetry log ─────────────────────────────────────────────────────
+      // By default we store only counts and compression ratios. Under
+      // PITH_TELEMETRY_VERBOSE=1 we additionally capture the first 3 lines
+      // of before/after content, with secret-shape redaction applied. The
+      // log rotates at ~10 MiB so it can't quietly grow unbounded.
       try {
         const os   = require('os');
-        const pDir = require('path').join(os.homedir(), '.pith');
+        const pth  = require('path');
+        const pDir = pth.join(os.homedir(), '.pith');
         fs.mkdirSync(pDir, { recursive: true });
+        const telemetryPath = pth.join(pDir, 'telemetry.jsonl');
+
         const entry = {
           ts:            new Date().toISOString(),
           session:       proj.session_start || '',
           tool:          toolName,
           format:        comprFormat,
           offloaded:     !!offloadedFile,
-          label:         (toolInput.file_path || toolInput.command || toolInput.pattern || '').slice(0, 80),
+          label:         scrubSecrets((toolInput.file_path || toolInput.command || toolInput.pattern || '').slice(0, 80)),
           before_lines:  lines.length,
           after_lines:   compressed.split('\n').length,
           before_tokens: beforeTokens,
           after_tokens:  afterTokens,
           saved_pct:     Math.round(savedTokens / beforeTokens * 100),
-          before_head:   lines.slice(0, 3).join('\n'),
-          after_head:    compressed.split('\n').slice(0, 3).join('\n'),
         };
-        fs.appendFileSync(require('path').join(pDir, 'telemetry.jsonl'), JSON.stringify(entry) + '\n');
+        if (process.env.PITH_TELEMETRY_VERBOSE === '1') {
+          entry.before_head = scrubSecrets(lines.slice(0, 3).join('\n'));
+          entry.after_head  = scrubSecrets(compressed.split('\n').slice(0, 3).join('\n'));
+        }
+
+        // Rotate if the current file exceeds 10 MiB.
+        try {
+          const st = fs.statSync(telemetryPath);
+          if (st && st.size > 10 * 1024 * 1024) {
+            fs.renameSync(telemetryPath, telemetryPath + '.1');
+          }
+        } catch (_) { /* first write — no file yet */ }
+
+        fs.appendFileSync(telemetryPath, JSON.stringify(entry) + '\n');
+        try { fs.chmodSync(telemetryPath, 0o600); } catch (_) { /* best-effort */ }
       } catch (e) { /* never block */ }
 
       process.stdout.write(JSON.stringify({ output: finalOutput }));
