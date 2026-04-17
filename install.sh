@@ -296,11 +296,41 @@ The script will:
 If \`wiki/\` does not exist or has no \`.md\` files, tell the user to build the wiki first with \`/pith wiki\`.
 `;
 
-fs.writeFileSync(path.join(cmds, 'pith.md'),       pithMd);
-fs.writeFileSync(path.join(cmds, 'budget.md'),     budgetMd);
-fs.writeFileSync(path.join(cmds, 'focus.md'),      focusMd);
-fs.writeFileSync(path.join(cmds, 'pith-graph.md'), graphMd);
-console.log('  ✓ slash commands registered (/pith, /budget, /focus, /pith-graph)');
+// /pith-update — safe update flow. --check previews; --apply pulls the
+// target ref and re-runs install.sh. Honours PITH_REF / PITH_PIN_SHA /
+// PITH_VERIFY_GPG from the environment (set them before invoking Claude
+// Code to pin / require a signed tag).
+const updateMd = `---
+allowed-tools: Bash
+---
+Check for a new Pith release, or apply one.
+
+**Sub-command:** $ARGUMENTS   (one of: \`check\` (default), \`apply\`, \`list\`)
+
+The sub-command is passed via a single-quoted heredoc so shell metacharacters
+cannot be evaluated:
+
+\`\`\`bash
+SUB=\$(head -n 1 <<'${HEREDOC_TAG}'
+$ARGUMENTS
+${HEREDOC_TAG}
+)
+case "\${SUB:-check}" in
+  check|apply|list) ;;
+  *) echo "[PITH: /pith-update takes one of: check, apply, list]"; exit 0 ;;
+esac
+python3 "${root}/tools/update.py" "--\${SUB:-check}"
+\`\`\`
+
+Show the tool output verbatim. For \`apply\`, confirm success in one line.
+`;
+
+fs.writeFileSync(path.join(cmds, 'pith.md'),        pithMd);
+fs.writeFileSync(path.join(cmds, 'budget.md'),      budgetMd);
+fs.writeFileSync(path.join(cmds, 'focus.md'),       focusMd);
+fs.writeFileSync(path.join(cmds, 'pith-graph.md'),  graphMd);
+fs.writeFileSync(path.join(cmds, 'pith-update.md'), updateMd);
+console.log('  ✓ slash commands registered (/pith, /budget, /focus, /pith-graph, /pith-update)');
 CMDSCRIPT
 
 # Write CLAUDE_PLUGIN_ROOT + installed ref/SHA to config so hooks know which

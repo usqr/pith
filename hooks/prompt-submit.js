@@ -359,6 +359,19 @@ Display this reference any time with: /pith help`
         saveProjectState({ session_injection_hash: null });
         out.push('PITH: session cache cleared. Full rules will be injected on next session start.');
 
+      } else if (arg === 'update') {
+        // /pith update [check|apply|list]
+        //   - check (default): print diff + hash deltas
+        //   - apply: fetch + checkout + re-run install.sh
+        //   - list:  show available tags
+        const sub = (rest || '').toLowerCase().trim().split(/\s+/).filter(Boolean);
+        let mode = sub[0] || 'check';
+        if (!['check', 'apply', 'list'].includes(mode)) {
+          out.push('[PITH: /pith update [check|apply|list]]');
+        } else {
+          out.push(runTool('update.py', [`--${mode}`], root));
+        }
+
       } else if (arg === 'telemetry') {
         // /pith telemetry status|purge|verbose <on|off>
         const sub = (rest || '').toLowerCase().trim().split(/\s+/);
