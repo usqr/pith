@@ -101,10 +101,13 @@ else
 fi
 
 # ── File permissions: telemetry.jsonl should be mode 600 ──────────────────────
+# Use Python rather than `stat` because BSD (macOS) and GNU stat take
+# different flags — `stat -f` on Linux prints filesystem stats, not the mode.
 echo
 echo "L-7: telemetry.jsonl stored with restrictive permissions"
 if [ -f "$TDIR/.pith/telemetry.jsonl" ]; then
-  PERM=$(stat -f '%A' "$TDIR/.pith/telemetry.jsonl" 2>/dev/null || stat -c '%a' "$TDIR/.pith/telemetry.jsonl" 2>/dev/null)
+  PERM=$(python3 -c 'import os, sys; print(oct(os.stat(sys.argv[1]).st_mode & 0o777)[2:])' \
+    "$TDIR/.pith/telemetry.jsonl" 2>/dev/null)
   if [ "$PERM" = "600" ]; then
     pass "telemetry.jsonl chmod 600"
   else
