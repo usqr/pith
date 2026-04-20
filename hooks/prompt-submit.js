@@ -71,7 +71,7 @@ for (let i = 0; i < argv.length; i++) {
   if (argv[i] === '--slash' && i + 1 < argv.length) {
     slashPrefix = argv[i + 1];
     if (!/^\/[A-Za-z0-9_-]+$/.test(slashPrefix)) {
-      process.stderr.write('[PITH: --slash prefix must match /[A-Za-z0-9_-]+]\n');
+      process.stderr.write('[PITH: --slash prefix must match /^\\/[A-Za-z0-9_-]+$/]\n');
       process.exit(2);
     }
     i++;
@@ -167,6 +167,9 @@ process.stdin.on('end', () => {
 
       } else if (arg === 'status') {
         out.push(runTool('health.py', [], root));
+
+      } else if (arg === 'update') {
+        out.push(buildUpdateInstructions(root));
 
       } else if (arg === 'recall') {
         // /pith recall — restore last session's mode, wiki, and budget
@@ -634,6 +637,34 @@ function runTool(script, args, root, extraArgs) {
     const msg = (e.stderr && e.stderr.toString ? e.stderr.toString() : '') || e.message || '';
     return `[PITH: ${script} failed — ${msg.slice(0, 200)}]`;
   }
+}
+
+function buildUpdateInstructions(root) {
+  // Detect install source: if root contains a .git dir it's the live repo; otherwise ~/.local/share/pith
+  const installDir = fs.existsSync(path.join(root, '.git'))
+    ? root
+    : path.join(require('os').homedir(), '.local', 'share', 'pith');
+  const hasGit = fs.existsSync(path.join(installDir, '.git'));
+
+  if (!hasGit) {
+    return (
+      'PITH UPDATE\n\n' +
+      'No git repo found at install location. Re-install to get the latest version:\n\n' +
+      '  bash <(curl -s https://raw.githubusercontent.com/abhisekjha/pith/main/install.sh)\n\n' +
+      'This will pull the latest version and re-register all hooks.'
+    );
+  }
+
+  return (
+    'PITH UPDATE — run these commands to pull the latest version:\n\n' +
+    '```bash\n' +
+    `git -C "${installDir}" pull --ff-only\n` +
+    `bash "${installDir}/install.sh"\n` +
+    '```\n\n' +
+    `Install dir: ${installDir}\n` +
+    'This pulls the latest commit, re-copies hooks to ~/.claude/hooks/pith/, and re-registers commands.\n\n' +
+    'After update, restart Claude Code (or open a new session) for changes to take effect.'
+  );
 }
 
 function loadTourSkill(root) {

@@ -25,9 +25,16 @@ class UnsafePathError(ValueError):
 def safe_wiki_path(cwd: Path, rel: object, wiki_subdir: str = "wiki") -> Path:
     """Return an absolute path guaranteed to live under <cwd>/<wiki_subdir>/.
 
-    Refuses: empty/None, non-string input, absolute paths, paths that
-    resolve outside the wiki root (via `..` or symlinks), and any
-    candidate whose own node is a symlink pointing outside.
+    `rel` must be a cwd-relative path whose first segment is `wiki_subdir`
+    (e.g. `"wiki/entities/Foo.md"` when `wiki_subdir="wiki"`). The prefix
+    is required — not silently added — so the caller's intent ("write into
+    the wiki") is visible at the call site and a missing prefix is treated
+    as a bug rather than quietly coerced.
+
+    Refuses: empty/None, non-string input, absolute paths, paths whose first
+    segment differs from `wiki_subdir`, paths that resolve outside the wiki
+    root (via `..` or symlinks), and any candidate whose own node is a
+    symlink pointing outside.
     """
     if not isinstance(rel, str) or not rel.strip():
         raise UnsafePathError(f"page path must be a non-empty string, got {rel!r}")
@@ -38,6 +45,16 @@ def safe_wiki_path(cwd: Path, rel: object, wiki_subdir: str = "wiki") -> Path:
     if Path(rel).is_absolute():
         raise UnsafePathError(f"page path must be relative to cwd: {rel!r}")
 
+    # Require the first segment to be `wiki_subdir`. This catches both the
+    # obvious "forgot the prefix" bug and paths like `other/wiki/foo.md` that
+    # contain the name later but don't start there. The relative_to() check
+    # below then enforces that no `..` segments escape the wiki root.
+    rel_parts = Path(rel).parts
+    if not rel_parts or rel_parts[0] != wiki_subdir:
+        raise UnsafePathError(
+            f"page path must start with {wiki_subdir!r}/: got {rel!r}"
+        )
+
     candidate = (cwd / rel).resolve()
 
     # If any ancestor is a symlink whose target escapes the wiki, reject.
@@ -46,8 +63,11 @@ def safe_wiki_path(cwd: Path, rel: object, wiki_subdir: str = "wiki") -> Path:
     except ValueError as exc:
         raise UnsafePathError(f"page path escapes {wiki_subdir}/: {rel!r}") from exc
 
-    # A candidate that already exists as a symlink pointing outside would be
-    # re-resolved by `.resolve()`, but belt-and-suspenders: reject lsymlinks.
+    # `.resolve()` above already follows symlinks, so intermediate directory
+    # symlinks that escape the wiki root are already caught by relative_to().
+    # This check covers the narrow case where `candidate` itself exists as a
+    # symlink at the resolved path (e.g. a wiki-internal symlink added manually)
+    # — we refuse to overwrite through it even if the target is inside the wiki.
     if candidate.is_symlink():
         raise UnsafePathError(f"refusing to write through a symlink: {rel!r}")
 

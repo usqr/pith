@@ -57,9 +57,29 @@ def row(label: str, value: str, color: str = '') -> str:
     return f'  {DIM}{label:<16}{RESET}{val:>8}'
 
 
-# Pricing (per 1M tokens) — update if model changes
-IN_COST_PER_M  = 3.0   # Sonnet 4.6 input
-OUT_COST_PER_M = 15.0  # Sonnet 4.6 output
+# Pricing per 1M tokens: (input, output)
+PRICING: dict[str, tuple[float, float]] = {
+    'opus-4-7':   (5.0,  25.0),  'opus-4-6':   (5.0,  25.0),  'opus-4-5':  (5.0,  25.0),
+    'opus-4-1':   (15.0, 75.0),  'opus-4':     (15.0, 75.0),
+    'sonnet-4-6': (3.0,  15.0),  'sonnet-4-5': (3.0,  15.0),  'sonnet-4':  (3.0,  15.0),
+    'sonnet-3-7': (3.0,  15.0),
+    'haiku-4-5':  (1.0,  5.0),   'haiku-3-5':  (0.8,  4.0),
+    'opus-3':     (15.0, 75.0),  'haiku-3':    (0.25, 1.25),
+}
+
+def get_pricing(model: str | None) -> tuple[float, float]:
+    if not model:
+        return (3.0, 15.0)
+    m = model.lower().replace('claude-', '').replace('_', '-')
+    for key in sorted(PRICING, key=len, reverse=True):
+        if key in m:
+            return PRICING[key]
+    return (3.0, 15.0)
+
+def model_label(model: str | None) -> str:
+    if not model:
+        return 'Unknown (defaulting to Sonnet 4.6 rates)'
+    return model
 
 
 def cost(tokens: int, per_m: float) -> float:
@@ -78,6 +98,7 @@ def pct_bar(n: int, total: int, w: int = 12) -> str:
         return ' ' * w
     filled = min(round(n / total * w), w)
     return f'{DIM}{"▪" * filled}{"·" * (w - filled)}{RESET}'
+
 
 
 def flow_chart(inp: int, out_tok: int, t_saved: int, without: int, limit: int) -> str:
@@ -141,24 +162,28 @@ def main():
     total_cost_saved = s.get('cost_saved_total', 0.0)
     turn_count   = s.get('turn_count_session', 0)
 
+    model_id = s.get('model')
+    IN_COST_PER_M, OUT_COST_PER_M = get_pricing(model_id)
+
     fill    = inp / limit if limit else 0
-    # Total without Pith = what we consumed + what Pith removed
+    # without = tool-compression baseline (input side only; output baseline added below)
     without = inp + t_saved
-    pct     = round(t_saved / without * 100) if without else 0
+    total_saved = t_saved + out_s
+    full_baseline = without + out_s
+    pct     = round(total_saved / full_baseline * 100) if full_baseline else 0
 
     # Cost calculations
     actual_in_cost  = cost(inp,     IN_COST_PER_M)
     actual_out_cost = cost(out_tok, OUT_COST_PER_M)
     actual_cost     = actual_in_cost + actual_out_cost
 
-    # Savings split by token type:
-    #   Tool compression saves INPUT tokens (results re-read each turn) → $3/1M
-    #   Output mode compression saves OUTPUT tokens → $15/1M (5× more valuable)
-    tool_saved_tokens = t_saved - out_s          # everything except output mode
-    saved_in_cost     = cost(tool_saved_tokens, IN_COST_PER_M)
-    saved_out_cost    = cost(out_s,             OUT_COST_PER_M)
-    saved_cost_val    = saved_in_cost + saved_out_cost
-    would_cost        = actual_cost + saved_cost_val
+    # t_saved (tool compression) and out_s (output mode) are independent buckets —
+    # out_s is NOT a subset of t_saved. Never subtract one from the other.
+    saved_in_cost  = cost(t_saved, IN_COST_PER_M)    # tool savings save input tokens
+    saved_out_cost = cost(out_s,   OUT_COST_PER_M)   # output mode saves output tokens
+    saved_cost_val = saved_in_cost + saved_out_cost
+    would_cost     = actual_cost + saved_cost_val
+    total_saved    = t_saved + out_s
 
     # Threshold color for context bar
     pct_fill = round(fill * 100)
@@ -168,7 +193,8 @@ def main():
 
     budget_str = f'\u2264{budget} tok/resp' if budget else 'none'
     pct_str    = f'{pct_color}{pct_fill}%{RESET}' if pct_color else f'{pct_fill}%'
-    model_str  = f'Sonnet 4.6  {DIM}(in ${IN_COST_PER_M}/1M · out ${OUT_COST_PER_M}/1M){RESET}'
+    _mlabel    = model_id if model_id else 'unknown (Sonnet 4.6 rates)'
+    model_str  = f'{_mlabel}  {DIM}(in ${IN_COST_PER_M}/1M · out ${OUT_COST_PER_M}/1M){RESET}'
 
     # ── Key metrics ───────────────────────────────────────────────────────────
     comp_ratio   = round(without / inp, 1) if inp > 0 else None
@@ -191,12 +217,12 @@ def main():
     print(flow_chart(inp, out_tok, t_saved, without, limit))
 
     # Key metrics row (only when we have real session data)
-    if t_saved > 0 and inp > 0:
+    if total_saved > 0 and inp > 0:
         print()
         ratio_str = f'{GREEN}{BOLD}{comp_ratio}:1{RESET}' if comp_ratio else '—'
         roi_str   = f'{GREEN}{BOLD}{roi}×{RESET}' if roi else '—'
         print(f'  {DIM}{"Compression ratio":<18}{RESET}{ratio_str}  '
-              f'{DIM}({pct}% fewer tokens — {fmt(t_saved)} saved of {fmt(without)} baseline){RESET}')
+              f'{DIM}({pct}% fewer tokens — {fmt(total_saved)} saved of {fmt(full_baseline)} baseline){RESET}')
         if roi:
             print(f'  {DIM}{"Cost ROI":<18}{RESET}{roi_str}  '
                   f'{DIM}(per $1 spent → ${roi} saved  ·  {fmt_cost(saved_cost_val)} total){RESET}')
@@ -206,7 +232,7 @@ def main():
 
     # ── Savings breakdown ─────────────────────────────────────────────────────
     print()
-    print(f'  {DIM}Savings this session  (without Pith: {fmt(without)} tokens){RESET}')
+    print(f'  {DIM}Savings this session  (without Pith: {fmt(full_baseline)} tokens){RESET}')
     print()
 
     # Output mode savings are estimated relative to actual output tokens, not tool savings.
@@ -236,11 +262,29 @@ def main():
         print()
 
     # Summary line
-    if t_saved > 0:
+    if total_saved > 0:
         print(f'  {GREEN}{BOLD}{"Total saved":<16}{RESET}  '
-              f'{GREEN}{BOLD}{fmt(t_saved)} tokens  ({pct}% of what this session would have used){RESET}')
+              f'{GREEN}{BOLD}{fmt(total_saved)} tokens  ({pct}% of what this session would have used){RESET}')
         print(f'  {DIM}{"Actual used":<16}{RESET}  {fmt(inp)} tokens  '
               f'{DIM}({100 - pct}% of uncompressed baseline){RESET}')
+        # One-line plain-English insight
+        if t_saved > 0 and out_s > 0:
+            dominant = 'output mode' if out_s >= t_saved else 'tool compression'
+            dom_pct  = round(max(out_s, t_saved) / total_saved * 100) if total_saved else 0
+            mode_label = mode.upper()
+            insight = f'{dominant} driving {dom_pct}% of savings'
+            if dominant == 'output mode':
+                insight += f' — {mode_label} active'
+            else:
+                insight += ' — hooks doing the heavy lifting'
+        elif out_s > 0:
+            insight = f'output mode ({proj.get("mode","off").upper()}) is your only active savings — try /pith focus or reading large files to trigger tool compression'
+        elif t_saved > 0:
+            insight = f'tool compression active — enable /pith lean or ultra to also compress responses'
+        else:
+            insight = ''
+        if insight:
+            print(f'  {DIM}{"  →":<16}{RESET}{DIM}{insight}{RESET}')
     else:
         print(f'  {DIM}No savings recorded yet — tool compression fires on first tool call.{RESET}')
 
@@ -255,14 +299,14 @@ def main():
     print(row('Actual spend',  fmt_cost(actual_cost), YELLOW))
     print()
     if saved_in_cost > 0:
-        print(row('  Tool compress',  f'-{fmt(tool_saved_tokens)} tok  {fmt_cost(saved_in_cost)}', DIM))
+        print(row('  Tool compress',  f'-{fmt(t_saved)} tok  {fmt_cost(saved_in_cost)}', DIM))
     if saved_out_cost > 0:
         print(row('  Output mode',    f'-{fmt(out_s)} tok  {fmt_cost(saved_out_cost)}', DIM))
     print(row('Cost saved',    fmt_cost(saved_cost_val), GREEN + BOLD))
     print(row('Without Pith',  fmt_cost(would_cost),  RED))
 
     # ── Lifetime ──────────────────────────────────────────────────────────────
-    lifetime_total = total + t_saved
+    lifetime_total = total + total_saved
     lifetime_cost  = total_cost_saved + saved_cost_val
     # Fallback: cost_saved_total was 0 before stop.js fix (sessions before the patch).
     # If accumulated cost is lower than what token count implies (all input at $3/1M),

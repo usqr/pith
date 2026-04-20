@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pith — token optimization for Claude Code</title>
-  <meta name="description" content="40–60% token reduction. Project wiki. Knowledge graph. Zero config." />
+  <meta name="description" content="40–60% token reduction. Project wiki. Knowledge graph. Caching layer. Zero config." />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1035,7 +1035,7 @@
       <div class="ba-row"><span class="ba-op">Token flow bars</span><span class="ba-val" style="color:var(--blue)">Baseline → removed → sent</span></div>
       <div class="ba-row"><span class="ba-op">Savings donut</span><span class="ba-val" style="color:var(--blue)">Per-bucket breakdown</span></div>
       <div class="ba-row"><span class="ba-op">Cost table</span><span class="ba-val" style="color:var(--blue)">Actual vs without Pith</span></div>
-      <div class="ba-row" style="border-bottom:none"><span class="ba-op" style="color:var(--fg4);font-size:11px">Standalone Chart.js dashboard written to ~/.pith/report.html. Opens in browser. Run any time — refreshes to current session data.</span></div>
+      <div class="ba-row" style="border-bottom:none"><span class="ba-op" style="color:var(--fg4);font-size:11px">Standalone Chart.js dashboard written to ~/.pith/report.html. Opens in browser — auto-refreshes every 30s. Run any time to regenerate.</span></div>
     </div>
   </div>
 
@@ -1046,8 +1046,8 @@
       <span class="prov-badge" style="background:rgba(10,132,255,0.1);color:var(--blue);border-color:rgba(10,132,255,0.2)">Live output</span>
     </div>
     <div style="padding:0;overflow:hidden;border-radius:0 0 20px 20px;">
-      <img src="assets/status-screenshot-v1.1.png"
-           alt="/pith status — token flow chart, 1.1:1 compression, real input/output counts, cost breakdown"
+      <img src="assets/status-screenshot-v1.2.png"
+           alt="/pith status — 92% compression, 47.2× ROI, $3.27 saved vs $0.07 actual spend"
            style="width:100%;display:block;border:none;" />
     </div>
   </div>
@@ -1565,6 +1565,36 @@
       <h3>Speculative Fetch + Session Report <span style="font-size:10px;font-weight:400;opacity:0.5;margin-left:4px">Phase 10 · 2026</span></h3>
       <p>When <code style="font-family:var(--mono);font-size:11px">/pith symbol</code> extracts a function, it automatically scans the body for calls to other functions defined in the same file and appends their signatures — eliminating a follow-up round-trip in ~60% of lookups. Pairs with <code style="font-family:var(--mono);font-size:11px">/pith report</code>, which generates a standalone HTML dashboard (Chart.js) showing token flow, per-bucket savings, cost breakdown, and a compression event timeline.</p>
     </div>
+    <div class="feat">
+      <div class="feat-n">20</div>
+      <h3>Multi-model pricing</h3>
+      <p>Cost estimates auto-detect your model from the transcript — Opus 4.x, Sonnet 4.x, Haiku 4.x, and prior generations. Correct $/MTok rates applied per session automatically. No config needed. Falls back to Sonnet 4.6 rates if model ID is unavailable.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">21</div>
+      <h3>Self-updating</h3>
+      <p>Already installed? <code style="font-family:var(--mono);font-size:11px">/pith update</code> pulls the latest version and re-syncs all hooks, slash commands, and settings in one step. No manual reinstall or curl-pipe needed for existing users.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">22</div>
+      <h3>Mtime caching — symbol &amp; focus <span style="font-size:10px;font-weight:400;opacity:0.5;margin-left:4px">v1.3 · 2026</span></h3>
+      <p>Every <code style="font-family:var(--mono);font-size:11px">/pith symbol</code> and <code style="font-family:var(--mono);font-size:11px">/pith focus</code> result is cached keyed by <code style="font-family:var(--mono);font-size:11px">path:mtime:symbol</code> in <code style="font-family:var(--mono);font-size:11px">/tmp/pith-symbols-cache.json</code>. Repeated lookups on the same file within a session return instantly — no re-read, no re-parse. Cache is invalidated the moment the file changes. Cap of 500 entries; oldest pruned automatically.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">23</div>
+      <h3>Source manifest + parallel compile <span style="font-size:10px;font-weight:400;opacity:0.5;margin-left:4px">v1.3 · 2026</span></h3>
+      <p><code style="font-family:var(--mono);font-size:11px">/pith compile</code> fingerprints every source file (<code style="font-family:var(--mono);font-size:11px">mtime:size</code>) and stores the manifest in <code style="font-family:var(--mono);font-size:11px">wiki/.compile-manifest.json</code>. On the next run, only changed sources are reprocessed — unchanged sources are skipped instantly. Page writes run in parallel via <code style="font-family:var(--mono);font-size:11px">ThreadPoolExecutor(4)</code>, cutting wall-clock time 3–5×. An exclusive lock file prevents concurrent runs from racing. Prompt caching via <code style="font-family:var(--mono);font-size:11px">cache_control: ephemeral</code> amortizes the static instruction block across all N page-write API calls in a compile run.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">24</div>
+      <h3>Ingest deduplication <span style="font-size:10px;font-weight:400;opacity:0.5;margin-left:4px">v1.3 · 2026</span></h3>
+      <p>Before running a Claude analysis, <code style="font-family:var(--mono);font-size:11px">/pith ingest</code> checks <code style="font-family:var(--mono);font-size:11px">wiki/.ingest-manifest.json</code> for a fingerprint of the source file. If the file hasn't changed since it was last ingested, the command exits immediately — no duplicate wiki pages, no wasted API call. Pass <code style="font-family:var(--mono);font-size:11px">--force</code> to override. The manifest is updated atomically after every successful ingest.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">25</div>
+      <h3>Atomic writes + lint fingerprint cache <span style="font-size:10px;font-weight:400;opacity:0.5;margin-left:4px">v1.3 · 2026</span></h3>
+      <p>Every wiki file write — pages, index, log — now goes through a <code style="font-family:var(--mono);font-size:11px">path.{pid}.tmp → rename()</code> pattern, which is atomic on POSIX. A crash mid-write leaves a stale <code style="font-family:var(--mono);font-size:11px">.tmp</code> file instead of a corrupted wiki page. <code style="font-family:var(--mono);font-size:11px">/pith lint</code> fingerprints all wiki pages via SHA-256 of combined mtimes; if the wiki is unchanged since the last run, the LLM semantic analysis is skipped entirely and the cached result is returned instantly.</p>
+    </div>
   </div>
 </div>
 
@@ -1753,10 +1783,15 @@
     </div>
 
     <div class="cmd-grid" style="margin-top:2px">
-      <div class="cmd-group-label">Install &amp; uninstall</div>
+      <div class="cmd-group-label">Install, update &amp; uninstall</div>
       <div class="cmd">
         <span class="cmd-k"><span class="hl">/pith install</span></span>
         <span class="cmd-v">Install Pith into Claude Code — copies hooks, patches settings.json, registers slash commands</span>
+        <span class="cmd-new">New</span>
+      </div>
+      <div class="cmd">
+        <span class="cmd-k"><span class="hl">/pith update</span></span>
+        <span class="cmd-v">Pull latest Pith version and re-sync all hooks, commands, and settings — for existing installs</span>
         <span class="cmd-new">New</span>
       </div>
       <div class="cmd">
@@ -1791,7 +1826,7 @@
 
 <!-- ━━━━━━━━━━━━━━━━━━━━ FOOTER ━━━━━━━━━━━━━━━━━━━━ -->
 <footer>
-  <span>Pith — token optimization for Claude Code</span>
+  <span>Pith v1.3.0 — token optimization for Claude Code</span>
   <div class="fl">
     <a href="https://github.com/abhisekjha/pith" target="_blank">GitHub</a>
     <a href="https://github.com/abhisekjha/pith/blob/main/README.md" target="_blank">Docs</a>

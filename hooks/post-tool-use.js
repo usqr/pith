@@ -187,6 +187,10 @@ process.stdin.on('end', () => {
           before_tokens: beforeTokens,
           after_tokens:  afterTokens,
           saved_pct:     Math.round(savedTokens / beforeTokens * 100),
+          // before_head / after_head (first 3 lines of file/bash output) are
+          // omitted by default — they can capture secrets from `cat .env`,
+          // `env | grep TOKEN`, etc. Set PITH_TELEMETRY_VERBOSE=1 to re-enable
+          // (see the scrubbed assignment below).
         };
         if (process.env.PITH_TELEMETRY_VERBOSE === '1') {
           entry.before_head = scrubSecrets(lines.slice(0, 3).join('\n'));

@@ -7,11 +7,29 @@
 const fs = require('fs');
 const { loadProjectState, saveProjectState } = require('./config');
 
-// Read token counts from transcript JSONL.
+// Pricing per 1M tokens — [input, output]
+const PRICING = {
+  'opus-4-7':   [5.0,  25.0],  'opus-4-6':   [5.0,  25.0],  'opus-4-5':  [5.0,  25.0],
+  'opus-4-1':   [15.0, 75.0],  'opus-4':     [15.0, 75.0],
+  'sonnet-4-6': [3.0,  15.0],  'sonnet-4-5': [3.0,  15.0],  'sonnet-4':  [3.0,  15.0],
+  'sonnet-3-7': [3.0,  15.0],
+  'haiku-4-5':  [1.0,  5.0],   'haiku-3-5':  [0.8,  4.0],
+  'opus-3':     [15.0, 75.0],  'haiku-3':    [0.25, 1.25],
+};
+
+function getPricing(model) {
+  if (!model) return [3.0, 15.0];
+  const m = model.toLowerCase().replace('claude-', '').replace(/_/g, '-');
+  const keys = Object.keys(PRICING).sort((a, b) => b.length - a.length);
+  for (const key of keys) { if (m.includes(key)) return PRICING[key]; }
+  return [3.0, 15.0];
+}
+
+// Read token counts and model from transcript JSONL.
 // output = sum of all turns (each turn's output is independent)
 // input  = latest assistant entry only (each turn's input includes full history → summing double-counts)
 function readTranscriptTokens(transcriptPath) {
-  let outputTokens = 0, latestInputTokens = 0;
+  let outputTokens = 0, latestInputTokens = 0, latestModel = null;
   try {
     const lines = fs.readFileSync(transcriptPath, 'utf8').split('\n');
     for (const line of lines) {
@@ -24,11 +42,12 @@ function readTranscriptTokens(transcriptPath) {
           latestInputTokens = (u.input_tokens || 0)
                             + (u.cache_read_input_tokens || 0)
                             + (u.cache_creation_input_tokens || 0);
+          if (d.message.model) latestModel = d.message.model;
         }
       } catch (_) { /* skip malformed line */ }
     }
   } catch (_) { /* file unreadable — caller falls back */ }
-  return { outputTokens, inputTokens: latestInputTokens };
+  return { outputTokens, inputTokens: latestInputTokens, model: latestModel };
 }
 
 const STDIN_CAP = 1 * 1024 * 1024;
@@ -49,7 +68,7 @@ process.stdin.on('end', () => {
     // ── Token counts: transcript > data.usage > response-length estimate ──
     let actualOut = 0;
     if (data.transcript_path) {
-      const { outputTokens, inputTokens } = readTranscriptTokens(data.transcript_path);
+      const { outputTokens, inputTokens, model } = readTranscriptTokens(data.transcript_path);
       if (outputTokens > 0 || inputTokens > 0) {
         actualOut = outputTokens;
         updates.output_tokens_est    = outputTokens;
@@ -57,6 +76,7 @@ process.stdin.on('end', () => {
         updates.output_tokens_actual = outputTokens;
         updates.input_tokens_actual  = inputTokens;
       }
+      if (model) updates.model = model;
     }
 
     if (actualOut === 0 && data.usage) {
@@ -77,8 +97,7 @@ process.stdin.on('end', () => {
     // stop.js fires once per response. actualOut = cumulative session total from transcript.
     // Must compute savings on DELTA only (new output this turn) to avoid compounding.
     // deltaOut = cumulative now minus cumulative at last stop event.
-    const IN_COST_PER_M  = 3.0;
-    const OUT_COST_PER_M = 15.0;
+    const [IN_COST_PER_M, OUT_COST_PER_M] = getPricing(updates.model || proj.model || null);
 
     if (actualOut > 0) {
       const prevOut  = proj.output_tokens_last_stop || 0;

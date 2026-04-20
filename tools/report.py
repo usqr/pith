@@ -19,8 +19,23 @@ STATE     = Path.home() / '.pith' / 'state.json'
 TELEMETRY = Path.home() / '.pith' / 'telemetry.jsonl'
 OUTPUT    = Path.home() / '.pith' / 'report.html'
 
-IN_COST_PER_M  = 3.0
-OUT_COST_PER_M = 15.0
+PRICING: dict[str, tuple[float, float]] = {
+    'opus-4-7':   (5.0,  25.0),  'opus-4-6':   (5.0,  25.0),  'opus-4-5':  (5.0,  25.0),
+    'opus-4-1':   (15.0, 75.0),  'opus-4':     (15.0, 75.0),
+    'sonnet-4-6': (3.0,  15.0),  'sonnet-4-5': (3.0,  15.0),  'sonnet-4':  (3.0,  15.0),
+    'sonnet-3-7': (3.0,  15.0),
+    'haiku-4-5':  (1.0,  5.0),   'haiku-3-5':  (0.8,  4.0),
+    'opus-3':     (15.0, 75.0),  'haiku-3':    (0.25, 1.25),
+}
+
+def get_pricing(model: str | None) -> tuple[float, float]:
+    if not model:
+        return (3.0, 15.0)
+    m = model.lower().replace('claude-', '').replace('_', '-')
+    for key in sorted(PRICING, key=len, reverse=True):
+        if key in m:
+            return PRICING[key]
+    return (3.0, 15.0)
 
 
 def load_state() -> dict:
@@ -55,28 +70,34 @@ def load_telemetry(session_start: str) -> list[dict]:
 def generate_html(s: dict, events: list[dict]) -> str:
     inp       = s.get('input_tokens_est', 0)
     out_tok   = s.get('output_tokens_est', 0)
-    t_saved   = s.get('tokens_saved_session', 0)
+    t_saved   = s.get('tokens_saved_session', 0)   # tool compression savings (input tokens)
     toon_s    = s.get('toon_savings_session', 0)
     skel_s    = s.get('skeleton_savings_session', 0)
     bash_s    = s.get('bash_savings_session', 0)
     grep_s    = s.get('grep_savings_session', 0)
     web_s     = s.get('web_savings_session', 0)
     offload_s = s.get('offload_savings_session', 0)
-    out_s     = s.get('output_savings_session', 0)
+    out_s     = s.get('output_savings_session', 0)  # output mode savings (output tokens, tracked separately)
     limit     = s.get('context_limit', 200_000)
     mode      = s.get('mode', 'off')
+    model_id  = s.get('model')
 
-    without   = inp + t_saved
-    pct       = round(t_saved / without * 100) if without else 0
-    fill_pct  = round(inp / limit * 100) if limit else 0
+    IN_COST_PER_M, OUT_COST_PER_M = get_pricing(model_id)
+    model_label = model_id if model_id else 'Sonnet 4.6'
+
+    # Total saved = tool savings + output mode savings (tracked in separate buckets)
+    total_saved = t_saved + out_s
+    without     = inp + t_saved          # baseline input = actual + what tool compression removed
+    pct         = round(total_saved / (without + out_s) * 100) if (without + out_s) else 0
+    fill_pct    = round(inp / limit * 100) if limit else 0
 
     actual_in_cost  = inp     / 1_000_000 * IN_COST_PER_M
     actual_out_cost = out_tok / 1_000_000 * OUT_COST_PER_M
     actual_cost     = actual_in_cost + actual_out_cost
 
-    tool_saved     = t_saved - out_s
-    saved_in_cost  = tool_saved / 1_000_000 * IN_COST_PER_M
-    saved_out_cost = out_s      / 1_000_000 * OUT_COST_PER_M
+    # t_saved and out_s are independent buckets — no subtraction
+    saved_in_cost  = t_saved / 1_000_000 * IN_COST_PER_M
+    saved_out_cost = out_s   / 1_000_000 * OUT_COST_PER_M
     saved_cost     = saved_in_cost + saved_out_cost
     would_cost     = actual_cost + saved_cost
 
@@ -127,7 +148,7 @@ def generate_html(s: dict, events: list[dict]) -> str:
       </div>
       <div class="cost-row">
         <span class="cost-label" style="color:#30d158">Tool compression</span>
-        <span class="cost-tokens" style="color:#30d158">-{fk(tool_saved)}</span>
+        <span class="cost-tokens" style="color:#30d158">-{fk(t_saved)}</span>
         <span class="cost-val" style="color:#30d158">-{fc(saved_in_cost)}</span>
       </div>
       <div class="cost-row">
@@ -164,8 +185,8 @@ new Chart(document.getElementById('timeline'), {{
   data: {{
     labels: {tel_labels},
     datasets: [
-      {{ label: 'After (kept)', data: {tel_after}, backgroundColor: '#0a84ff', borderRadius: 3, borderWidth: 0 }},
-      {{ label: 'Saved',        data: {tel_saved}, backgroundColor: '#30d158', borderRadius: 3, borderWidth: 0 }}
+      {{ label: 'After (kept)', data: {tel_after}, backgroundColor: 'rgba(59,142,255,0.75)', borderRadius: 4, borderWidth: 0 }},
+      {{ label: 'Saved',        data: {tel_saved}, backgroundColor: 'rgba(52,211,153,0.80)', borderRadius: 4, borderWidth: 0 }}
     ]
   }},
   options: {{
@@ -188,6 +209,7 @@ new Chart(document.getElementById('timeline'), {{
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="refresh" content="30" />
 <title>Pith Session Report</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
@@ -196,23 +218,24 @@ new Chart(document.getElementById('timeline'), {{
 :root {{
   --font:    -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
   --mono:    "SF Mono", ui-monospace, "Cascadia Code", monospace;
-  --bg:      #000;
-  --bg1:     #0a0a0a;
-  --bg2:     #111;
-  --fg:      #fff;
-  --fg2:     rgba(255,255,255,0.55);
-  --fg3:     rgba(255,255,255,0.25);
-  --fg4:     rgba(255,255,255,0.10);
-  --border:  rgba(255,255,255,0.08);
-  --border2: rgba(255,255,255,0.14);
-  --blue:    #0a84ff;
-  --green:   #30d158;
-  --red:     #ff453a;
-  --amber:   #ffd60a;
-  --violet:  #bf5af2;
+  --bg:      #0b0b14;
+  --bg1:     rgba(255,255,255,0.035);
+  --bg2:     rgba(255,255,255,0.065);
+  --fg:      #f2f2fa;
+  --fg2:     rgba(242,242,250,0.65);
+  --fg3:     rgba(242,242,250,0.35);
+  --fg4:     rgba(242,242,250,0.18);
+  --border:  rgba(255,255,255,0.09);
+  --border2: rgba(255,255,255,0.16);
+  --blue:    #3b8eff;
+  --green:   #34d399;
+  --red:     #f87171;
+  --amber:   #fbbf24;
+  --violet:  #c084fc;
   --emerald: #34d399;
   --indigo:  #818cf8;
   --orange:  #fb923c;
+  --pink:    #f472b6;
   --ease:    cubic-bezier(0.25,0.46,0.45,0.94);
 }}
 
@@ -226,94 +249,118 @@ body {{
   min-height: 100vh;
 }}
 
+/* ── Global mesh background ───────────────────────────────────────── */
+body::before {{
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 900px 600px at 80% -10%, rgba(59,142,255,0.09) 0%, transparent 70%),
+    radial-gradient(ellipse 600px 500px at -5% 80%, rgba(52,211,153,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 500px 400px at 55% 60%, rgba(192,132,252,0.05) 0%, transparent 70%);
+}}
+
 /* ── NAV ──────────────────────────────────────────────────────────── */
 nav {{
   position: fixed; top: 0; left: 0; right: 0; z-index: 999;
-  display: flex; align-items: center; height: 48px; padding: 0 28px;
-  background: rgba(0,0,0,0.72);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  display: flex; align-items: center; height: 52px; padding: 0 32px;
+  background: rgba(11,11,20,0.75);
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
   border-bottom: 1px solid var(--border);
 }}
 .nav-logo {{
-  display: inline-flex; align-items: center; gap: 8px;
-  font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--fg);
+  display: inline-flex; align-items: center; gap: 9px;
+  font-size: 15px; font-weight: 700; letter-spacing: -0.02em; color: var(--fg);
   text-decoration: none; margin-right: auto;
 }}
-.nav-meta {{ font-size: 12px; color: var(--fg4); font-family: var(--mono); }}
-.nav-badge {{
-  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
-  padding: 3px 10px; border-radius: 980px; text-transform: uppercase;
-  background: rgba(10,132,255,0.1); color: var(--blue); border: 1px solid rgba(10,132,255,0.2);
-  margin-left: 12px;
-}}
-
-/* ── HERO / HEADER ────────────────────────────────────────────────── */
-.hero {{
-  position: relative; padding: 128px 48px 80px;
-  display: flex; flex-direction: column; align-items: flex-start;
-  max-width: 1120px; margin: 0 auto; overflow: visible;
-}}
-.hero-mesh {{ position: absolute; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }}
-.mesh-orb {{ position: absolute; border-radius: 50%; filter: blur(100px); }}
-.m1 {{ width:700px;height:400px;background:radial-gradient(ellipse,rgba(10,132,255,0.10) 0%,transparent 70%);top:-10%;right:-5%; }}
-.m2 {{ width:400px;height:300px;background:radial-gradient(ellipse,rgba(52,211,153,0.07) 0%,transparent 70%);bottom:0%;left:-5%; }}
-.m3 {{ width:300px;height:300px;background:radial-gradient(ellipse,rgba(191,90,242,0.06) 0%,transparent 70%);top:30%;left:40%; }}
-
-.hero-inner {{ position: relative; z-index: 1; }}
-.hero-eyebrow {{
-  display: inline-flex; align-items: center; gap: 8px;
-  font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--fg3); margin-bottom: 20px;
-}}
-.eyebrow-dot {{
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--blue); box-shadow: 0 0 10px rgba(10,132,255,0.8);
+.nav-logo-dot {{
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--violet); box-shadow: 0 0 12px rgba(192,132,252,0.7);
   animation: blink 2.5s ease-in-out infinite;
 }}
 @keyframes blink {{ 0%,100%{{opacity:1}} 50%{{opacity:0.3}} }}
+.nav-meta {{ font-size: 12px; color: var(--fg4); font-family: var(--mono); }}
+.nav-badge {{
+  font-size: 11px; font-weight: 600; letter-spacing: 0.05em;
+  padding: 4px 12px; border-radius: 980px; text-transform: uppercase;
+  background: rgba(59,142,255,0.12); color: var(--blue);
+  border: 1px solid rgba(59,142,255,0.25); margin-left: 14px;
+}}
 
+/* ── HERO ─────────────────────────────────────────────────────────── */
+.hero {{
+  position: relative; padding: 136px 52px 72px;
+  display: flex; flex-direction: column; align-items: flex-start;
+  max-width: 1160px; margin: 0 auto;
+}}
+.hero-inner {{ position: relative; z-index: 1; }}
+.hero-eyebrow {{
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--fg4); margin-bottom: 24px;
+  border: 1px solid var(--border); border-radius: 980px;
+  padding: 5px 14px; background: var(--bg1);
+}}
 .hero h1 {{
-  font-size: clamp(48px, 6vw, 80px); font-weight: 700;
-  letter-spacing: -0.045em; line-height: 0.95; margin-bottom: 16px;
+  font-size: clamp(44px, 5.5vw, 76px); font-weight: 800;
+  letter-spacing: -0.05em; line-height: 1; margin-bottom: 20px;
 }}
 .h1-a {{ color: #fff; }}
-.h1-b {{ color: rgba(255,255,255,0.28); display: block; }}
-.hero-sub {{
-  font-size: 16px; color: var(--fg3); font-family: var(--mono);
-  letter-spacing: -0.01em; margin-top: 12px;
+.h1-b {{
+  background: linear-gradient(90deg, var(--violet) 0%, var(--blue) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; display: block;
+}}
+.hero-meta {{
+  display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px;
+}}
+.hero-chip {{
+  font-size: 13px; color: var(--fg3); font-family: var(--mono);
+  background: var(--bg1); border: 1px solid var(--border);
+  border-radius: 7px; padding: 5px 12px;
 }}
 
 /* ── CONTENT WRAPPER ──────────────────────────────────────────────── */
-.content {{ max-width: 1120px; margin: 0 auto; padding: 0 48px 96px; }}
+.content {{ max-width: 1160px; margin: 0 auto; padding: 0 52px 104px; position: relative; z-index: 1; }}
 
 /* ── STATS BAR ────────────────────────────────────────────────────── */
 .stats {{
-  display: grid; grid-template-columns: repeat(4, 1fr);
-  border: 1px solid var(--border); border-radius: 20px;
-  overflow: hidden; margin-bottom: 2px;
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px;
+  margin-bottom: 2px;
 }}
 .stat {{
-  padding: 40px 36px;
-  border-right: 1px solid var(--border);
-  transition: background 0.2s;
+  padding: 36px 32px;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  transition: background 0.2s, border-color 0.2s;
+  position: relative; overflow: hidden;
 }}
-.stat:last-child {{ border-right: none; }}
-.stat:hover {{ background: var(--bg1); }}
+.stat::before {{
+  content: ''; position: absolute; inset: 0; opacity: 0;
+  transition: opacity 0.2s;
+  border-radius: inherit;
+}}
+.stat:hover {{ background: var(--bg2); border-color: var(--border2); }}
+.stat:hover::before {{ opacity: 1; }}
 .stat-eye {{
   font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--fg4); margin-bottom: 12px;
+  color: var(--fg4); margin-bottom: 14px;
 }}
 .stat-n {{
-  font-size: clamp(36px, 4vw, 56px); font-weight: 700;
-  letter-spacing: -0.05em; line-height: 1; margin-bottom: 8px;
+  font-size: clamp(32px, 3.5vw, 52px); font-weight: 800;
+  letter-spacing: -0.05em; line-height: 1; margin-bottom: 10px;
 }}
 .stat-l {{ font-size: 13px; color: var(--fg3); letter-spacing: -0.01em; line-height: 1.5; }}
 
 /* ── SECTION LABEL ────────────────────────────────────────────────── */
 .section-label {{
-  font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--blue); margin: 56px 0 20px;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--blue); margin: 56px 0 16px;
+}}
+.section-label::before {{
+  content: ''; width: 18px; height: 1.5px; background: currentColor; border-radius: 2px;
 }}
 .section-label.green  {{ color: var(--emerald); }}
 .section-label.violet {{ color: var(--violet); }}
@@ -327,92 +374,105 @@ nav {{
 .wide {{ grid-column: 1 / -1; }}
 
 .card {{
-  background: var(--bg1); border: 1px solid var(--border);
-  border-radius: 20px; padding: 32px;
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 16px; padding: 32px;
   transition: background 0.25s var(--ease), border-color 0.25s var(--ease);
+  position: relative; overflow: hidden;
 }}
 .card:hover {{ background: var(--bg2); border-color: var(--border2); }}
 .card-eye {{
   font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--fg4); margin-bottom: 8px;
+  text-transform: uppercase; color: var(--fg4); margin-bottom: 6px;
 }}
 .card-title {{
-  font-size: 17px; font-weight: 600; letter-spacing: -0.02em;
-  color: #fff; margin-bottom: 24px; line-height: 1.3;
+  font-size: 17px; font-weight: 700; letter-spacing: -0.025em;
+  color: #fff; margin-bottom: 28px; line-height: 1.3;
 }}
 .chart-wrap {{ height: 240px; position: relative; }}
 
 /* ── TOKEN FLOW ───────────────────────────────────────────────────── */
-.flow-rows {{ display: flex; flex-direction: column; gap: 16px; }}
-.flow-row {{ display: flex; flex-direction: column; gap: 6px; }}
+.flow-rows {{ display: flex; flex-direction: column; gap: 20px; }}
+.flow-row {{ display: flex; flex-direction: column; gap: 8px; }}
 .flow-header {{ display: flex; justify-content: space-between; align-items: baseline; }}
-.flow-name {{
-  font-size: 13px; color: var(--fg2); letter-spacing: -0.01em;
-}}
+.flow-name {{ font-size: 13px; color: var(--fg2); letter-spacing: -0.01em; }}
 .flow-val {{
-  font-family: var(--mono); font-size: 13px; font-weight: 600;
+  font-family: var(--mono); font-size: 14px; font-weight: 700;
   letter-spacing: -0.02em;
 }}
 .flow-track {{
-  height: 6px; background: rgba(255,255,255,0.06); border-radius: 980px; overflow: hidden;
+  height: 8px; background: rgba(255,255,255,0.07); border-radius: 980px; overflow: hidden;
 }}
 .flow-fill {{
   height: 100%; border-radius: 980px;
-  transition: width 0.9s cubic-bezier(0.16,1,0.3,1);
+  transition: width 1.1s cubic-bezier(0.16,1,0.3,1);
 }}
-.flow-sub {{ font-size: 11px; color: var(--fg4); }}
+.flow-sub {{ font-size: 11px; color: var(--fg4); margin-top: -2px; }}
 
 /* ── COST TABLE ───────────────────────────────────────────────────── */
 .cost-rows {{ display: flex; flex-direction: column; }}
 .cost-row {{
   display: grid; grid-template-columns: 1fr auto auto;
   align-items: center; gap: 16px;
-  padding: 13px 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--border);
 }}
 .cost-row:last-child {{ border-bottom: none; }}
-.cost-row-sep {{ border-top: 1px solid var(--border2); margin-top: 2px; padding-top: 15px; }}
+.cost-row-sep {{
+  border-top: 1px solid var(--border2); margin-top: 4px; padding-top: 16px;
+  background: rgba(255,255,255,0.015); margin-left: -32px; margin-right: -32px;
+  padding-left: 32px; padding-right: 32px;
+}}
 .cost-label {{ font-size: 14px; color: var(--fg2); letter-spacing: -0.01em; }}
 .cost-tokens {{ font-family: var(--mono); font-size: 13px; color: var(--fg3); text-align: right; }}
-.cost-val {{ font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--fg2); text-align: right; min-width: 80px; }}
+.cost-val {{
+  font-family: var(--mono); font-size: 14px; font-weight: 700;
+  color: var(--fg2); text-align: right; min-width: 90px;
+}}
 
 /* ── BUCKET TABLE ─────────────────────────────────────────────────── */
 .bucket-rows {{ display: flex; flex-direction: column; gap: 0; }}
 .bucket-row {{
   display: flex; align-items: center; gap: 12px;
-  padding: 14px 0; border-bottom: 1px solid var(--border);
+  padding: 15px 0; border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
 }}
 .bucket-row:last-child {{ border-bottom: none; }}
-.bucket-dot {{ width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }}
+.bucket-row:hover {{ background: rgba(255,255,255,0.02); margin: 0 -12px; padding: 15px 12px; }}
+.bucket-dot {{
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  box-shadow: 0 0 8px currentColor;
+}}
 .bucket-name {{ font-size: 14px; color: var(--fg2); flex: 1; letter-spacing: -0.01em; }}
-.bucket-track {{ flex: 2; height: 4px; background: rgba(255,255,255,0.06); border-radius: 980px; overflow: hidden; }}
+.bucket-track {{
+  flex: 2; height: 5px; background: rgba(255,255,255,0.07);
+  border-radius: 980px; overflow: hidden;
+}}
 .bucket-fill {{ height: 100%; border-radius: 980px; }}
-.bucket-val {{ font-family: var(--mono); font-size: 12px; color: var(--fg3); min-width: 48px; text-align: right; }}
-.bucket-pct {{ font-family: var(--mono); font-size: 11px; color: var(--fg4); min-width: 32px; text-align: right; }}
+.bucket-val {{ font-family: var(--mono); font-size: 13px; color: var(--fg3); min-width: 52px; text-align: right; font-weight: 600; }}
+.bucket-pct {{ font-family: var(--mono); font-size: 11px; color: var(--fg4); min-width: 36px; text-align: right; }}
 
 /* ── REVEAL ───────────────────────────────────────────────────────── */
-.r {{ opacity: 0; transform: translateY(24px); transition: opacity 0.7s var(--ease), transform 0.7s var(--ease); }}
+.r {{ opacity: 0; transform: translateY(28px); transition: opacity 0.75s var(--ease), transform 0.75s var(--ease); }}
 .r.on {{ opacity: 1; transform: none; }}
-.r.d1 {{ transition-delay: 0.08s; }}
-.r.d2 {{ transition-delay: 0.16s; }}
-.r.d3 {{ transition-delay: 0.24s; }}
-.r.d4 {{ transition-delay: 0.32s; }}
+.r.d1 {{ transition-delay: 0.07s; }}
+.r.d2 {{ transition-delay: 0.14s; }}
+.r.d3 {{ transition-delay: 0.22s; }}
+.r.d4 {{ transition-delay: 0.30s; }}
 
 /* ── FOOTER ───────────────────────────────────────────────────────── */
 .page-footer {{
   border-top: 1px solid var(--border);
-  padding: 20px 48px;
+  padding: 22px 52px;
   display: flex; justify-content: space-between; align-items: center;
   font-size: 12px; color: var(--fg4); letter-spacing: -0.01em;
-  max-width: 1120px; margin: 0 auto;
+  max-width: 1160px; margin: 0 auto; position: relative; z-index: 1;
 }}
 
-@media (max-width: 800px) {{
-  .hero {{ padding: 100px 24px 60px; }}
-  .content {{ padding: 0 24px 64px; }}
+@media (max-width: 860px) {{
+  .hero {{ padding: 100px 24px 56px; }}
+  .content {{ padding: 0 24px 72px; }}
   .stats {{ grid-template-columns: repeat(2, 1fr); }}
-  .stat:nth-child(2) {{ border-right: none; }}
-  .stat:nth-child(3), .stat:nth-child(4) {{ border-top: 1px solid var(--border); }}
   .grid, .grid.cols3 {{ grid-template-columns: 1fr; }}
   .page-footer {{ padding: 20px 24px; flex-direction: column; gap: 8px; text-align: center; }}
 }}
@@ -423,15 +483,7 @@ nav {{
 <!-- NAV -->
 <nav>
   <a class="nav-logo" href="#">
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="10" cy="10" r="9" stroke="rgba(255,255,255,0.18)" stroke-width="1"/>
-      <circle cx="10" cy="10" r="5.5" stroke="rgba(255,255,255,0.45)" stroke-width="1.2"/>
-      <circle cx="10" cy="10" r="2" fill="#fff"/>
-      <line x1="10" y1="1.5" x2="10" y2="3.5" stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-linecap="round"/>
-      <line x1="10" y1="16.5" x2="10" y2="18.5" stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-linecap="round"/>
-      <line x1="1.5" y1="10" x2="3.5" y2="10" stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-linecap="round"/>
-      <line x1="16.5" y1="10" x2="18.5" y2="10" stroke="rgba(255,255,255,0.35)" stroke-width="1" stroke-linecap="round"/>
-    </svg>
+    <div class="nav-logo-dot"></div>
     Pith
   </a>
   <span class="nav-meta">{session_date}</span>
@@ -440,21 +492,19 @@ nav {{
 
 <!-- HERO -->
 <section class="hero r on">
-  <div class="hero-mesh">
-    <div class="mesh-orb m1"></div>
-    <div class="mesh-orb m2"></div>
-    <div class="mesh-orb m3"></div>
-  </div>
   <div class="hero-inner">
     <div class="hero-eyebrow">
-      <div class="eyebrow-dot"></div>
-      Token optimization · Pith for Claude Code
+      ◆ Token optimization · Pith for Claude Code
     </div>
     <h1>
-      <span class="h1-a">{fk(t_saved)} tokens saved.</span>
-      <span class="h1-b">{pct}% compression this session.</span>
+      <span class="h1-a">{fk(total_saved)} tokens saved.</span>
+      <span class="h1-b">{pct}% compression.</span>
     </h1>
-    <p class="hero-sub">mode: {mode.upper()} &nbsp;·&nbsp; model: Sonnet 4.6 &nbsp;·&nbsp; {session_date}</p>
+    <div class="hero-meta">
+      <span class="hero-chip">mode: {mode.upper()}</span>
+      <span class="hero-chip">model: {model_label}</span>
+      <span class="hero-chip">{session_date}</span>
+    </div>
   </div>
 </section>
 
@@ -469,8 +519,8 @@ nav {{
   </div>
   <div class="stat">
     <div class="stat-eye">Tokens saved</div>
-    <div class="stat-n" style="color:var(--emerald)">{fk(t_saved)}</div>
-    <div class="stat-l">of {fk(without)} token baseline</div>
+    <div class="stat-n" style="color:var(--emerald)">{fk(total_saved)}</div>
+    <div class="stat-l">of {fk(without + out_s)} token baseline</div>
   </div>
   <div class="stat">
     <div class="stat-eye">Cost ROI</div>
@@ -495,16 +545,16 @@ nav {{
       <div class="flow-row">
         <div class="flow-header">
           <span class="flow-name">Baseline (without Pith)</span>
-          <span class="flow-val" style="color:rgba(255,255,255,0.35)">{fk(without)}</span>
+          <span class="flow-val" style="color:rgba(242,242,250,0.30)">{fk(without)}</span>
         </div>
-        <div class="flow-track"><div class="flow-fill" style="width:100%;background:rgba(255,255,255,0.12)"></div></div>
+        <div class="flow-track"><div class="flow-fill" style="width:100%;background:rgba(255,255,255,0.14)"></div></div>
       </div>
       <div class="flow-row">
         <div class="flow-header">
           <span class="flow-name" style="color:var(--violet)">Pith intercepted &amp; removed</span>
-          <span class="flow-val" style="color:var(--violet)">-{fk(t_saved)}</span>
+          <span class="flow-val" style="color:var(--violet)">-{fk(total_saved)}</span>
         </div>
-        <div class="flow-track"><div class="flow-fill" style="width:{pct_bar(t_saved, without)};background:var(--violet)"></div></div>
+        <div class="flow-track"><div class="flow-fill" style="width:{pct_bar(total_saved, without + out_s)};background:linear-gradient(90deg,var(--violet),var(--blue))"></div></div>
         <div class="flow-sub">{pct}% of baseline removed before reaching context</div>
       </div>
       <div class="flow-row">
@@ -567,25 +617,25 @@ nav {{
 
 <footer class="page-footer r">
   <span>◆ Pith Session Report &nbsp;·&nbsp; {session_date}</span>
-  <span>Run <code style="font-family:var(--mono);opacity:0.6">/pith report</code> to refresh &nbsp;·&nbsp; <code style="font-family:var(--mono);opacity:0.6">/pith status</code> for terminal view</span>
+  <span>Auto-refreshes every 30s &nbsp;·&nbsp; <code style="font-family:var(--mono);opacity:0.5">/pith status</code> for terminal view</span>
 </footer>
 
 <script>
 // ── Chart.js global defaults ──────────────────────────────────────────────────
-Chart.defaults.color = 'rgba(255,255,255,0.3)';
-Chart.defaults.borderColor = 'rgba(255,255,255,0.04)';
+Chart.defaults.color = 'rgba(242,242,250,0.35)';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
 Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif";
 Chart.defaults.font.size = 12;
 
-const BLUE    = '#0a84ff';
-const GREEN   = '#30d158';
-const AMBER   = '#ffd60a';
-const VIOLET  = '#bf5af2';
+const BLUE    = '#3b8eff';
+const GREEN   = '#34d399';
+const AMBER   = '#fbbf24';
+const VIOLET  = '#c084fc';
 const EMERALD = '#34d399';
 const ORANGE  = '#fb923c';
 const INDIGO  = '#818cf8';
 const PINK    = '#f472b6';
-const RED     = '#ff453a';
+const RED     = '#f87171';
 
 // ── Bucket data ───────────────────────────────────────────────────────────────
 const bucketLabels = {buckets_labels};
@@ -603,7 +653,7 @@ bucketLabels.forEach((label, i) => {{
   const row = document.createElement('div');
   row.className = 'bucket-row';
   row.innerHTML = `
-    <div class="bucket-dot" style="background:${{bucketColors[i]}}"></div>
+    <div class="bucket-dot" style="background:${{bucketColors[i]}};color:${{bucketColors[i]}}"></div>
     <div class="bucket-name">${{label}}</div>
     <div class="bucket-track"><div class="bucket-fill" style="width:${{width}};background:${{bucketColors[i]}}"></div></div>
     <div class="bucket-val">${{val}}</div>
@@ -628,21 +678,22 @@ new Chart(document.getElementById('donut'), {{
     labels: nonZeroLabels.length ? nonZeroLabels : ['No data yet'],
     datasets: [{{
       data: nonZeroData.length ? nonZeroData : [1],
-      backgroundColor: nonZeroColors.length ? nonZeroColors : ['rgba(255,255,255,0.06)'],
+      backgroundColor: nonZeroColors.length ? nonZeroColors : ['rgba(255,255,255,0.07)'],
       borderWidth: 0,
-      hoverBorderWidth: 2,
-      hoverBorderColor: 'rgba(255,255,255,0.2)',
+      hoverBorderWidth: 3,
+      hoverBorderColor: 'rgba(255,255,255,0.25)',
+      hoverOffset: 6,
     }}]
   }},
   options: {{
-    cutout: '68%',
+    cutout: '70%',
     plugins: {{
       legend: {{
         position: 'right',
-        labels: {{ boxWidth: 10, padding: 14, color: 'rgba(255,255,255,0.45)', font: {{ size: 11 }} }}
+        labels: {{ boxWidth: 10, padding: 16, color: 'rgba(242,242,250,0.55)', font: {{ size: 11 }} }}
       }}
     }},
-    animation: {{ duration: 900, easing: 'easeOutQuart' }}
+    animation: {{ duration: 1000, easing: 'easeOutQuart' }}
   }}
 }});
 
@@ -652,9 +703,13 @@ new Chart(document.getElementById('bar'), {{
   data: {{
     labels: ['Input', 'Output', 'Saved'],
     datasets: [{{
-      data: [{inp}, {out_tok}, {t_saved}],
-      backgroundColor: [BLUE, AMBER, GREEN],
-      borderRadius: 6,
+      data: [{inp}, {out_tok}, {total_saved}],
+      backgroundColor: [
+        'rgba(59,142,255,0.75)',
+        'rgba(251,191,36,0.75)',
+        'rgba(52,211,153,0.80)',
+      ],
+      borderRadius: 8,
       borderWidth: 0,
     }}]
   }},
@@ -663,13 +718,13 @@ new Chart(document.getElementById('bar'), {{
     scales: {{
       y: {{
         beginAtZero: true,
-        grid: {{ color: 'rgba(255,255,255,0.04)' }},
-        ticks: {{ color: 'rgba(255,255,255,0.3)', font: {{ size: 11 }},
+        grid: {{ color: 'rgba(255,255,255,0.05)' }},
+        ticks: {{ color: 'rgba(242,242,250,0.35)', font: {{ size: 11 }},
                   callback: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v }}
       }},
-      x: {{ grid: {{ display: false }}, ticks: {{ color: 'rgba(255,255,255,0.3)', font: {{ size: 12 }} }} }}
+      x: {{ grid: {{ display: false }}, ticks: {{ color: 'rgba(242,242,250,0.4)', font: {{ size: 13, weight: '600' }} }} }}
     }},
-    animation: {{ duration: 900, easing: 'easeOutQuart' }}
+    animation: {{ duration: 1000, easing: 'easeOutQuart' }}
   }}
 }});
 
