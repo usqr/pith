@@ -7,7 +7,7 @@
 Token compression hooks for Claude Code. Install once, works in every session, zero config.
 
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/abhisekjha/pith/main/install.sh)
+bash <(curl -s https://raw.githubusercontent.com/usqr/pith/main/install.sh)
 ```
 
 ---
@@ -95,11 +95,12 @@ Pull exact function or class definitions without reading the whole file.
 ## Install
 
 ```bash
-# One-liner
-bash <(curl -s https://raw.githubusercontent.com/abhisekjha/pith/main/install.sh)
+bash <(curl -s https://raw.githubusercontent.com/usqr/pith/main/install.sh)
+```
 
-# From source
-git clone https://github.com/abhisekjha/pith
+Or from source:
+```bash
+git clone https://github.com/usqr/pith
 bash pith/install.sh
 ```
 

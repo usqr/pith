@@ -1,0 +1,54 @@
+name: security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  regression-suite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run security regression suite
+        run: bash tests/run_all.sh
+
+      - name: Static injection sniff
+        run: |
+          echo "Checking for re-introduced shell-injection patterns..."
+          FOUND=0
+          # Any new execSync on a template string is a red flag.
+          if grep -nE 'execSync\(' hooks/*.js | grep -v 'execFileSync'; then
+            echo "::error::execSync found in hooks/ — use execFileSync."
+            FOUND=1
+          fi
+          # shell=True in python tools is almost always wrong.
+          if grep -nE 'shell[[:space:]]*=[[:space:]]*True' tools/*.py; then
+            echo "::error::shell=True found in tools/ — use argv list."
+            FOUND=1
+          fi
+          # Slash command templates must not embed $ARGUMENTS in shell-quoted JSON.
+          if grep -nE "echo[[:space:]]+'\{" commands/*.md; then
+            echo "::error::commands/*.md embeds JSON in bash — use a heredoc."
+            FOUND=1
+          fi
+          exit $FOUND
+
+      - name: Lint shell scripts
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck -x install.sh uninstall.sh hooks/statusline.sh \
+                     tests/test_shell_safety.sh tests/test_telemetry_scrub.sh \
+                     tests/run_all.sh \
+            || true   # warnings tolerated for now; tighten later
