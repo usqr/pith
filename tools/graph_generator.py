@@ -473,11 +473,37 @@ nodeG
 
     const outDeg = edges.filter(e => (e.source.id||e.source) === d.id).length;
     const inDeg  = edges.filter(e => (e.target.id||e.target) === d.id).length;
-    tooltip.innerHTML =
-      `<div class="tip-label" style="color:${nodeColor(d)}">${d.label}</div>` +
-      `<div class="tip-group" style="color:${nodeColor(d)}">${d.group}</div>` +
-      (d.path ? `<div class="tip-path">wiki/${d.path}</div>` : '<div class="tip-path" style="color:#f472b6">⚬ ghost — not yet created</div>') +
-      `<div class="tip-links">↗ ${outDeg} outbound &nbsp;·&nbsp; ↙ ${inDeg} inbound</div>`;
+    // Build tooltip contents as DOM nodes with textContent so wiki-authored
+    // label/group/path strings (possibly from `/pith ingest --url` or an LLM
+    // page proposal) are always rendered as text, never HTML. Prevents DOM
+    // XSS from crafted titles containing HTML tags or inline event handlers.
+    const color = nodeColor(d);
+    while (tooltip.firstChild) tooltip.removeChild(tooltip.firstChild);
+    const lbl = document.createElement("div");
+    lbl.className = "tip-label";
+    lbl.style.color = color;
+    lbl.textContent = d.label == null ? "" : String(d.label);
+    tooltip.appendChild(lbl);
+    const grp = document.createElement("div");
+    grp.className = "tip-group";
+    grp.style.color = color;
+    grp.textContent = d.group == null ? "" : String(d.group);
+    tooltip.appendChild(grp);
+    const pathDiv = document.createElement("div");
+    pathDiv.className = "tip-path";
+    if (d.path) {
+      pathDiv.textContent = "wiki/" + String(d.path);
+    } else {
+      pathDiv.style.color = "#f472b6";
+      pathDiv.textContent = "⚬ ghost — not yet created";
+    }
+    tooltip.appendChild(pathDiv);
+    const links = document.createElement("div");
+    links.className = "tip-links";
+    // Non-breaking spaces around the middot — textContent does not interpret
+    // HTML entities, so we use the literal \u00A0 character instead of &nbsp;.
+    links.textContent = "↗ " + outDeg + " outbound \u00A0·\u00A0 ↙ " + inDeg + " inbound";
+    tooltip.appendChild(links);
     tooltip.classList.add("visible");
   })
   .on("mousemove", event => {

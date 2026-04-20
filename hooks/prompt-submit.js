@@ -71,7 +71,7 @@ for (let i = 0; i < argv.length; i++) {
   if (argv[i] === '--slash' && i + 1 < argv.length) {
     slashPrefix = argv[i + 1];
     if (!/^\/[A-Za-z0-9_-]+$/.test(slashPrefix)) {
-      process.stderr.write('[PITH: --slash prefix must match /[A-Za-z0-9_-]+]\n');
+      process.stderr.write('[PITH: --slash prefix must match /^\\/[A-Za-z0-9_-]+$/]\n');
       process.exit(2);
     }
     i++;

@@ -78,6 +78,12 @@ def main() -> int:
         expect_reject("traversal via ..", cwd, "wiki/../../../tmp/pwn.md")
         expect_reject("traversal to sibling of cwd", cwd, "../sibling/pwn.md")
         expect_reject("path outside wiki/ (sibling dir)", cwd, "raw/sources/pwn.md")
+        # Missing "wiki/" prefix must be rejected explicitly, even if the
+        # relative path would resolve cleanly under cwd. Caller must always
+        # opt in to writing into the wiki by naming it.
+        expect_reject("missing wiki/ prefix", cwd, "entities/Foo.md")
+        expect_reject("name appears later but not first",
+                      cwd, "raw/wiki/foo.md")
         expect_reject("empty string", cwd, "")
         expect_reject("whitespace only", cwd, "   ")
         expect_reject("None", cwd, None)

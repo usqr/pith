@@ -12,6 +12,14 @@ escapes `<`, `>`, `&` as \\uXXXX. Verify that a poisoned title:
   - never produces a literal `</script>` in the rendered HTML
   - never produces an un-escaped `<` or `>` inside the JSON block
   - round-trips through JSON.parse to the original string
+
+Follow-up: DOM XSS via tooltip (hover path). The earlier template built
+tooltip contents with a template-literal assignment to `tooltip.innerHTML`
+that substituted `d.label` / `d.path` / `d.group` directly — so a crafted
+label was re-parsed as HTML on hover. The fix rebuilds the tooltip as DOM
+nodes with `textContent`. The tests below enforce that the template no
+longer concatenates user-derived strings into `innerHTML` and that
+`textContent` is used for `d.label`, `d.group`, and `d.path`.
 """
 from __future__ import annotations
 import json
@@ -106,6 +114,33 @@ def main() -> int:
         _bad("_json_for_html let & or > through")
     else:
         _ok("_json_for_html escapes & and >")
+
+    # 5. Tooltip DOM-XSS (hover path).
+    # The template must not build tooltip contents by concatenating user-
+    # derived strings into `innerHTML`. Look for the exact bad shapes and
+    # confirm each user-controlled field is rendered via `textContent`.
+    if re.search(r"tooltip\.innerHTML\s*=", html):
+        _bad("tooltip.innerHTML assignment is present — re-introduces DOM XSS")
+    else:
+        _ok("no tooltip.innerHTML assignment in template")
+
+    for field in ("d.label", "d.group", "d.path"):
+        # Search for `.textContent = ... <field> ...` on the same or next line
+        # — permissive enough to survive formatting changes, strict enough to
+        # flag a reversion to innerHTML for that field.
+        pattern = r"\.textContent\s*=\s*[^;\n]*" + re.escape(field)
+        if re.search(pattern, html):
+            _ok(f"{field} is rendered via textContent")
+        else:
+            _bad(f"{field} is NOT rendered via textContent — possible DOM XSS")
+
+    # 6. Poisoned label/group/path should NOT appear as raw HTML anywhere in
+    # the rendered template (the JSON block escapes them; any other use must
+    # funnel through textContent).
+    if re.search(r"<img[^>]*onerror", html, re.IGNORECASE):
+        _bad("raw <img onerror=…> substring appears in rendered HTML")
+    else:
+        _ok("no raw <img onerror> substring in rendered HTML")
 
     print()
     print(f"── Results ── passed: {results['pass']}  failed: {results['fail']}")
