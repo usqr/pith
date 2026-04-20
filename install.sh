@@ -143,23 +143,33 @@ mkdir -p "${HOME}/.pith"
 chmod 700 "${HOME}/.pith" 2>/dev/null || true
 
 # Copy hooks
-for f in session-start.js post-tool-use.js prompt-submit.js stop.js config.js statusline.sh; do
+for f in session-start.js post-tool-use.js prompt-submit.js stop.js config.js statusline.sh statusline-wrapper.sh; do
   cp "${PLUGIN_ROOT}/hooks/${f}" "${HOOKS_DIR}/${f}"
   echo "  ✓ hooks/${f}"
 done
-chmod +x "${HOOKS_DIR}/statusline.sh"
+chmod +x "${HOOKS_DIR}/statusline.sh" "${HOOKS_DIR}/statusline-wrapper.sh"
 
 # Create symlink to skills and tools so hooks can resolve paths
 ln -sfn "${PLUGIN_ROOT}/skills" "${HOOKS_DIR}/../pith-skills" 2>/dev/null || true
 ln -sfn "${PLUGIN_ROOT}/tools"  "${HOOKS_DIR}/../pith-tools"  2>/dev/null || true
 
 # Patch settings.json
-node - "${SETTINGS}" "${HOOKS_DIR}" <<'NODESCRIPT'
+#
+# The statusLine handling preserves any user-configured statusline. Claude Code
+# only supports a single statusLine.command, so to compose rather than clobber
+# we save the pre-existing command to ~/.config/pith/config.json and point
+# settings at statusline-wrapper.sh, which re-runs the original and prefixes
+# the PITH badge. If nothing was configured before, the wrapper is a no-op
+# passthrough for statusline.sh.
+PITH_CONFIG="${HOME}/.config/pith/config.json"
+mkdir -p "$(dirname "${PITH_CONFIG}")"
+node - "${SETTINGS}" "${HOOKS_DIR}" "${PITH_CONFIG}" <<'NODESCRIPT'
 const fs = require('fs');
 const path = require('path');
 
 const settingsPath = process.argv[2];
 const hooksDir     = process.argv[3];
+const pithCfgPath  = process.argv[4];
 
 let settings = {};
 try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch (e) {}
@@ -189,9 +199,33 @@ add('UserPromptSubmit',  'prompt-submit.js',   5, null);
 add('PostToolUse',       'post-tool-use.js',  10, 'Pith: compressing...');
 add('Stop',              'stop.js',            5, null);
 
+// Preserve an existing user statusline so we can compose with it.
+// An entry is "ours" if its command references our hooks dir — matches both
+// the legacy statusline.sh target and the new wrapper on reinstall.
+const existing = settings.statusLine;
+const isOurs = (cmd) => typeof cmd === 'string' && cmd.includes(hooksDir);
+const wrapperCmd = `bash "${hooksDir}/statusline-wrapper.sh"`;
+
+// Merge with whatever is already in the pith config so we don't clobber
+// plugin_root written by the second config step.
+let cfg = {};
+try { cfg = JSON.parse(fs.readFileSync(pithCfgPath, 'utf8')); } catch (_) {}
+if (existing && existing.command && !isOurs(existing.command)) {
+  cfg.original_statusline = { ...existing };
+  console.log('  ✓ existing statusline preserved (will be composed with PITH badge)');
+} else if (!existing) {
+  // No statusline at all — clear any stale original from a prior install so
+  // the wrapper doesn't resurrect a statusline the user explicitly removed.
+  delete cfg.original_statusline;
+}
+fs.mkdirSync(path.dirname(pithCfgPath), { recursive: true });
+fs.writeFileSync(pithCfgPath, JSON.stringify(cfg, null, 2));
+try { fs.chmodSync(pithCfgPath, 0o600); } catch (_) {}
+
 settings.statusLine = {
+  ...(existing && typeof existing === 'object' ? existing : {}),
   type: 'command',
-  command: `bash "${hooksDir}/statusline.sh"`,
+  command: wrapperCmd,
 };
 
 fs.mkdirSync(path.dirname(settingsPath), { recursive: true });

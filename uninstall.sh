@@ -23,16 +23,17 @@ for cmd in pith budget focus pith-graph; do
   fi
 done
 
-# Patch settings.json — remove pith hooks and statusline
+# Patch settings.json — remove pith hooks and restore any pre-Pith statusline.
 if [ -f "${SETTINGS}" ]; then
   # Pass the hooks dir explicitly so we only match hook entries whose command
   # actually references OUR install path. The previous filter just substring-
   # matched "pith" anywhere in the entry JSON — any unrelated user hook with
   # "pith" in its path would have been silently deleted.
-  node - "${SETTINGS}" "${HOOKS_DIR}" <<'NODESCRIPT'
+  PITH_CONFIG="${HOME}/.config/pith/config.json"
+  node - "${SETTINGS}" "${HOOKS_DIR}" "${PITH_CONFIG}" <<'NODESCRIPT'
 const fs = require('fs');
 const path = require('path');
-const [,, settingsPath, hooksDir] = process.argv;
+const [,, settingsPath, hooksDir, pithCfgPath] = process.argv;
 
 let s = {};
 try { s = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch (_) {}
@@ -53,11 +54,24 @@ if (s.hooks) {
   if (Object.keys(s.hooks).length === 0) delete s.hooks;
 }
 
-// Same check for statusLine: only strip if it's pointing at our bundle.
+// Restore the user's pre-Pith statusline if we saved one; otherwise strip
+// ours entirely. Only touch statusLine if it's in fact ours.
 if (s.statusLine
     && typeof s.statusLine.command === 'string'
     && s.statusLine.command.includes(hooksDir)) {
-  delete s.statusLine;
+  let original = null;
+  try {
+    const cfg = JSON.parse(fs.readFileSync(pithCfgPath, 'utf8'));
+    if (cfg && cfg.original_statusline && cfg.original_statusline.command) {
+      original = cfg.original_statusline;
+    }
+  } catch (_) {}
+  if (original) {
+    s.statusLine = original;
+    console.log('  ✓ original statusline restored');
+  } else {
+    delete s.statusLine;
+  }
 }
 
 fs.writeFileSync(settingsPath, JSON.stringify(s, null, 2));
